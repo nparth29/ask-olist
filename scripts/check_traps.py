@@ -117,6 +117,36 @@ TRAPS = [
                       GROUP BY c.customer_unique_id HAVING COUNT(*) > 1)) AS repeat_by_customer_unique_id
                 """,
             ),
+            (
+                "Repeat customers whose 2nd order was placed at the SAME timestamp as the 1st, against 2nd orders placed later "
+                "(within 30 days): do the two orders have different sellers? (Is a same-second pair one cart split per seller?)",
+                """
+                WITH co AS (
+                  SELECT c.customer_unique_id AS u, o.order_id AS oid, o.order_purchase_timestamp AS ts,
+                         ROW_NUMBER() OVER (PARTITION BY c.customer_unique_id
+                                            ORDER BY o.order_purchase_timestamp, o.order_id) AS rn
+                  FROM orders o JOIN customers c ON c.customer_id = o.customer_id),
+                pairs AS (
+                  SELECT a.oid AS o1, b.oid AS o2,
+                         CASE WHEN a.ts = b.ts THEN '2nd order at the same timestamp'
+                              ELSE '2nd order later, within 30 days' END AS kind
+                  FROM co a JOIN co b ON b.u = a.u AND a.rn = 1 AND b.rn = 2
+                  WHERE julianday(b.ts) - julianday(a.ts) <= 30),
+                sel AS (
+                  SELECT kind,
+                         (SELECT COUNT(DISTINCT seller_id) FROM order_items WHERE order_id = p.o1) AS n1,
+                         (SELECT COUNT(DISTINCT seller_id) FROM order_items WHERE order_id = p.o2) AS n2,
+                         (SELECT COUNT(*) FROM (SELECT seller_id FROM order_items WHERE order_id = p.o1
+                                                INTERSECT
+                                                SELECT seller_id FROM order_items WHERE order_id = p.o2)) AS shared
+                  FROM pairs p)
+                SELECT kind, COUNT(*) AS pairs,
+                       SUM(n1 > 0 AND n2 > 0 AND shared = 0) AS different_sellers,
+                       SUM(shared > 0) AS share_a_seller,
+                       SUM(n1 = 0 OR n2 = 0) AS an_order_has_no_items
+                FROM sel GROUP BY kind ORDER BY kind
+                """,
+            ),
         ],
     ),
     (

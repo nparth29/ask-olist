@@ -266,7 +266,7 @@
   difficulty: medium
   traps: [4, 5]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(*) AS on_time_orders
     FROM orders
@@ -281,7 +281,7 @@
   difficulty: medium
   traps: [1, 3, 4]
   order_matters: true
-  verified: false
+  verified: true
   gold_sql: |
     WITH order_totals AS (
       SELECT o.order_id, o.customer_id, SUM(oi.price) AS order_total
@@ -305,7 +305,7 @@
   difficulty: hard
   traps: [1, 3, 4]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     WITH items AS (
       SELECT order_id, SUM(price) AS item_total FROM order_items GROUP BY order_id
@@ -326,7 +326,7 @@
   difficulty: hard
   traps: [4, 5, 8]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     WITH scores AS (
       SELECT order_id, AVG(review_score) AS score FROM order_reviews GROUP BY order_id
