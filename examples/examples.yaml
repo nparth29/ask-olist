@@ -5,7 +5,7 @@
   question: "What was the total product revenue in 2018?"
   tables: [orders, order_items]
   traps: [3, 4]
-  verified: false
+  verified: true
   sql: |
     SELECT ROUND(SUM(oi.price), 2) AS product_revenue
     FROM orders o
@@ -17,7 +17,7 @@
   question: "What was the total revenue including shipping in 2017?"
   tables: [orders, order_items]
   traps: [3, 4]
-  verified: false
+  verified: true
   sql: |
     SELECT ROUND(SUM(oi.price + oi.freight_value), 2) AS revenue_including_freight
     FROM orders o
@@ -29,7 +29,7 @@
   question: "How many orders are there in each order status?"
   tables: [orders]
   traps: [4]
-  verified: false
+  verified: true
   sql: |
     SELECT order_status, COUNT(*) AS orders
     FROM orders
@@ -40,7 +40,7 @@
   question: "What are the top 10 product categories by product revenue?"
   tables: [orders, order_items, products, category_translation]
   traps: [3, 4, 6]
-  verified: false
+  verified: true
   sql: |
     SELECT COALESCE(t.product_category_name_english, p.product_category_name, 'unknown') AS category,
            ROUND(SUM(oi.price), 2) AS product_revenue
@@ -57,7 +57,7 @@
   question: "Which 5 customer states have the most late deliveries?"
   tables: [orders, customers]
   traps: [5]
-  verified: false
+  verified: true
   sql: |
     SELECT c.customer_state, COUNT(*) AS late_orders
     FROM orders o
