@@ -6,3 +6,5 @@ python-dotenv
 sqlglot
 pyyaml
 pytest
+fastapi
+uvicorn

@@ -117,3 +117,9 @@ One entry per choice: what we chose, the main alternative, and why (written for 
 - **Why:** a wrong example teaches a wrong pattern, and then the evaluation would measure our own mistakes. The `--no-rag` flag is how we compare configurations A (zero-shot) and B (RAG) in Phase 5.
 
 **Update to D22 (20 Nov 2026):** Parth verified the last six examples (ex24, ex26-ex30), so all 30 are indexed. ex24 had its `delivered` filter removed (approval time is not a sales question, so rule 4 does not apply), and ex30 was re-tagged `traps: []` because it counts review rows and never averages per order. All 8 traps are still covered by other examples.
+
+## D23. API design: plain FastAPI wrapper, 503 for model problems, no `httpx`
+- **Chosen:** `api/main.py` has `POST /ask {question, use_rag}` and `GET /health`. The endpoint is a plain `def`, so FastAPI runs the blocking pipeline in a worker thread. `use_rag` defaults to true, and false gives the zero-shot mode. The request is validated (3-500 characters after trimming). If Gemini is unavailable (quota, overload), the API returns HTTP 503 with a short message, not a 500 crash. `/health` only checks that the database and index files exist; it never calls the LLM, so a health check cannot use up quota.
+- **Alternative:** put the logic in the endpoint, or use FastAPI's `TestClient` for tests.
+- **Why:** the API stays a thin wrapper over `pipeline.ask`, so the CLI, API and evaluation all run the same code. `TestClient` needs the `httpx` package, which is not in our approved dependency list, so the tests call the endpoint functions directly (with a mocked pipeline) and the real server is checked with `curl`.
+- **Zero-call check (20 Nov 2026):** the server was started with a dummy API key, and a question already in the cache returned HTTP 200 with the full answer in 1.1 s. A real Gemini call with that key would have failed, so no API call was made.
