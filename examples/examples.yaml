@@ -225,7 +225,7 @@
   question: "Which 5 product categories have the lowest average review score, among categories with at least 100 reviewed orders?"
   tables: [order_items, products, order_reviews, category_translation]
   traps: [6, 8]
-  verified: false
+  verified: true
   sql: |
     WITH order_cat AS (
       SELECT DISTINCT oi.order_id, p.product_category_name AS cat
@@ -250,7 +250,7 @@
   question: "What was the product revenue in each month of 2018?"
   tables: [orders, order_items]
   traps: [3, 4]
-  verified: false
+  verified: true
   sql: |
     SELECT strftime('%Y-%m', o.order_purchase_timestamp) AS month,
            ROUND(SUM(oi.price), 2) AS product_revenue
@@ -265,7 +265,7 @@
   question: "Who are the top 10 sellers by product revenue?"
   tables: [orders, order_items, sellers]
   traps: [3, 4]
-  verified: false
+  verified: true
   sql: |
     SELECT oi.seller_id, s.seller_state, ROUND(SUM(oi.price), 2) AS product_revenue
     FROM order_items oi
@@ -280,7 +280,7 @@
   question: "Which 5 states have the most sellers?"
   tables: [sellers]
   traps: []
-  verified: false
+  verified: true
   sql: |
     SELECT seller_state, COUNT(*) AS sellers
     FROM sellers
@@ -292,7 +292,7 @@
   question: "Which 5 product categories have the most different products?"
   tables: [products, category_translation]
   traps: [6]
-  verified: false
+  verified: true
   sql: |
     SELECT COALESCE(t.product_category_name_english, p.product_category_name, 'unknown') AS category,
            COUNT(*) AS products
