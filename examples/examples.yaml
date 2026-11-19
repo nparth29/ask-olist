@@ -74,7 +74,7 @@
   question: "What percentage of delivered orders arrived later than the estimated date?"
   tables: [orders]
   traps: [5]
-  verified: false
+  verified: true
   sql: |
     SELECT ROUND(100.0 * SUM(order_delivered_customer_date > order_estimated_delivery_date) / COUNT(*), 2) AS pct_late
     FROM orders
@@ -86,7 +86,7 @@
   question: "Which 5 customer states have the longest average delivery time in days?"
   tables: [orders, customers]
   traps: [4]
-  verified: false
+  verified: true
   sql: |
     SELECT c.customer_state,
            ROUND(AVG(julianday(o.order_delivered_customer_date) - julianday(o.order_purchase_timestamp)), 1) AS avg_delivery_days
@@ -102,7 +102,7 @@
   question: "Which 5 states have the most customers?"
   tables: [customers]
   traps: [2]
-  verified: false
+  verified: true
   sql: |
     SELECT customer_state, COUNT(DISTINCT customer_unique_id) AS customers
     FROM customers
@@ -114,7 +114,7 @@
   question: "What percentage of customers have placed more than one order?"
   tables: [orders, customers]
   traps: [2]
-  verified: false
+  verified: true
   sql: |
     SELECT ROUND(100.0 * SUM(order_count > 1) / COUNT(*), 2) AS pct_repeat_customers
     FROM (
@@ -128,7 +128,7 @@
   question: "What is the average order value in product revenue?"
   tables: [orders, order_items]
   traps: [1, 3, 4]
-  verified: false
+  verified: true
   sql: |
     SELECT ROUND(AVG(order_total), 2) AS avg_order_value
     FROM (
