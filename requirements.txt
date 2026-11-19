@@ -1,0 +1,8 @@
+pandas
+numpy
+google-genai
+faiss-cpu
+python-dotenv
+sqlglot
+pyyaml
+pytest
