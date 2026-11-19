@@ -71,7 +71,7 @@ SELECT ROUND(AVG(freight_value), 2) AS avg_freight_per_item
 FROM order_items
 ```
 
-1 row(s), 0.02s. First 1:
+1 row(s), 0.04s. First 1:
 
 | avg_freight_per_item |
 |---|
@@ -87,7 +87,7 @@ FROM order_payments
 WHERE payment_type = 'voucher'
 ```
 
-1 row(s), 0.01s. First 1:
+1 row(s), 0.02s. First 1:
 
 | voucher_payments |
 |---|
@@ -102,7 +102,7 @@ SELECT COUNT(DISTINCT customer_unique_id) AS unique_customers
 FROM customers
 ```
 
-1 row(s), 0.01s. First 1:
+1 row(s), 0.02s. First 1:
 
 | unique_customers |
 |---|
@@ -119,7 +119,7 @@ JOIN order_items oi ON oi.order_id = o.order_id
 WHERE o.order_status = 'delivered'
 ```
 
-1 row(s), 1.06s. First 1:
+1 row(s), 1.13s. First 1:
 
 | total_freight |
 |---|
@@ -170,7 +170,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2018'
 ```
 
-1 row(s), 0.92s. First 1:
+1 row(s), 0.94s. First 1:
 
 | credit_card_paid |
 |---|
@@ -190,7 +190,7 @@ FROM (
 )
 ```
 
-1 row(s), 0.07s. First 1:
+1 row(s), 0.10s. First 1:
 
 | multi_seller_orders |
 |---|
@@ -231,7 +231,7 @@ FROM (
 )
 ```
 
-1 row(s), 2.39s. First 1:
+1 row(s), 2.49s. First 1:
 
 | customers_with_multiple_sellers |
 |---|
@@ -248,7 +248,7 @@ JOIN orders o ON o.order_id = oi.order_id
 WHERE o.order_status = 'delivered'
 ```
 
-1 row(s), 0.76s. First 1:
+1 row(s), 0.78s. First 1:
 
 | avg_items_per_order |
 |---|
@@ -287,7 +287,7 @@ ORDER BY delivered_orders DESC
 LIMIT 5
 ```
 
-5 row(s), 1.64s. First 5:
+5 row(s), 1.70s. First 5:
 
 | seller_id | delivered_orders |
 |---|---|
@@ -312,7 +312,7 @@ ORDER BY product_revenue DESC
 LIMIT 5
 ```
 
-5 row(s), 1.25s. First 5:
+5 row(s), 1.32s. First 5:
 
 | seller_state | product_revenue |
 |---|---|
@@ -354,7 +354,7 @@ JOIN category_translation t ON t.product_category_name = p.product_category_name
 WHERE t.product_category_name_english = 'health_beauty'
 ```
 
-1 row(s), 0.22s. First 1:
+1 row(s), 0.27s. First 1:
 
 | avg_item_price |
 |---|
@@ -374,7 +374,7 @@ WHERE order_status = 'delivered'
   AND strftime('%Y', order_purchase_timestamp) = '2017'
 ```
 
-1 row(s), 0.07s. First 1:
+1 row(s), 0.09s. First 1:
 
 | on_time_orders |
 |---|
@@ -401,7 +401,7 @@ ORDER BY avg_order_value DESC
 LIMIT 5
 ```
 
-5 row(s), 1.78s. First 5:
+5 row(s), 1.98s. First 5:
 
 | customer_state | avg_order_value |
 |---|---|
@@ -431,7 +431,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2018'
 ```
 
-1 row(s), 1.37s. First 1:
+1 row(s), 1.41s. First 1:
 
 | avg_product_revenue_per_order | avg_paid_per_order |
 |---|---|
@@ -454,39 +454,39 @@ WHERE o.order_status = 'delivered'
   AND o.order_delivered_customer_date > o.order_estimated_delivery_date
 ```
 
-1 row(s), 1.27s. First 1:
+1 row(s), 1.34s. First 1:
 
 | avg_review_score_late_orders |
 |---|
 | 2.57 |
 
-## q25 (hard): How many customers placed a second order at a later time than their first, within 30 days of it?
+## q25 (hard): How many customers placed another order at a later time, within 30 days of their first order?
 
 verified: True   traps: [2]   order matters: False
 
 ```sql
 WITH customer_orders AS (
-  SELECT c.customer_unique_id, o.order_purchase_timestamp AS ts,
-         ROW_NUMBER() OVER (PARTITION BY c.customer_unique_id
-                            ORDER BY o.order_purchase_timestamp, o.order_id) AS rn
+  SELECT c.customer_unique_id, o.order_purchase_timestamp AS ts
   FROM orders o
   JOIN customers c ON c.customer_id = o.customer_id
+),
+first_orders AS (
+  SELECT customer_unique_id, MIN(ts) AS first_ts
+  FROM customer_orders
+  GROUP BY customer_unique_id
 )
-SELECT COUNT(*) AS customers
-FROM customer_orders first_order
-JOIN customer_orders second_order
-  ON second_order.customer_unique_id = first_order.customer_unique_id
- AND first_order.rn = 1
- AND second_order.rn = 2
-WHERE second_order.ts > first_order.ts
-  AND julianday(second_order.ts) - julianday(first_order.ts) <= 30
+SELECT COUNT(DISTINCT f.customer_unique_id) AS customers
+FROM first_orders f
+JOIN customer_orders later ON later.customer_unique_id = f.customer_unique_id
+WHERE later.ts > f.first_ts
+  AND julianday(later.ts) - julianday(f.first_ts) <= 30
 ```
 
-1 row(s), 2.04s. First 1:
+1 row(s), 2.05s. First 1:
 
 | customers |
 |---|
-| 1254 |
+| 1261 |
 
 ## q26 (hard): Which 3 sellers have the highest percentage of late deliveries, among sellers with at least 50 delivered orders?
 
@@ -510,7 +510,7 @@ ORDER BY pct_late DESC
 LIMIT 3
 ```
 
-3 row(s), 2.07s. First 3:
+3 row(s), 2.24s. First 3:
 
 | seller_id | pct_late | delivered_orders |
 |---|---|---|
@@ -536,7 +536,7 @@ GROUP BY op.payment_type
 ORDER BY op.payment_type
 ```
 
-5 row(s), 1.41s. First 5:
+5 row(s), 1.40s. First 5:
 
 | payment_type | avg_review_score |
 |---|---|
@@ -571,7 +571,7 @@ ORDER BY pct_cross_state DESC
 LIMIT 5
 ```
 
-5 row(s), 3.76s. First 5:
+5 row(s), 4.10s. First 5:
 
 | category | pct_cross_state | items |
 |---|---|---|
@@ -599,7 +599,7 @@ FROM spend
 WHERE total > (SELECT AVG(total) FROM spend)
 ```
 
-1 row(s), 2.46s. First 1:
+1 row(s), 2.57s. First 1:
 
 | above_average_customers |
 |---|
@@ -617,7 +617,7 @@ LEFT JOIN (SELECT DISTINCT geolocation_zip_code_prefix AS zip FROM geolocation) 
 WHERE g.zip IS NULL
 ```
 
-1 row(s), 0.31s. First 1:
+1 row(s), 0.34s. First 1:
 
 | sellers_without_geolocation |
 |---|
