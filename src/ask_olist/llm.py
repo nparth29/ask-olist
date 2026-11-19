@@ -99,6 +99,29 @@ def generate_sql_json(prompt: str, prompt_version: str) -> dict[str, Any]:
     return result
 
 
+def embed_texts(texts: list[str]) -> list[list[float]]:
+    """Embed texts with Gemini. Each text is cached on its own, so a text is only ever embedded once."""
+    model = config.EMBEDDING_MODEL
+    version = f"embed_{config.EMBEDDING_TASK_TYPE.lower()}_v1"
+    keys = [cache.make_key(model, version, text) for text in texts]
+    vectors: list[list[float] | None] = [cache.get("embedding", key) for key in keys]
+
+    missing = [i for i, vec in enumerate(vectors) if vec is None]
+    for start in range(0, len(missing), config.EMBED_BATCH_SIZE):
+        batch = missing[start : start + config.EMBED_BATCH_SIZE]
+        response = _call_with_backoff(
+            lambda: _get_client().models.embed_content(
+                model=model,
+                contents=[texts[i] for i in batch],
+                config=types.EmbedContentConfig(task_type=config.EMBEDDING_TASK_TYPE),
+            )
+        )
+        for i, embedding in zip(batch, response.embeddings):
+            vectors[i] = list(embedding.values)
+            cache.put("embedding", keys[i], vectors[i])
+    return vectors
+
+
 def generate_text(prompt: str, prompt_version: str) -> str:
     """Plain-text generation (used for the English answer)."""
     model = config.LLM_MODEL

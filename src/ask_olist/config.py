@@ -27,6 +27,14 @@ SCHEMA_PATH = ROOT / "schema" / "schema.md"
 SQL_PROMPT_VERSION = "sql_v1"
 ANSWER_PROMPT_VERSION = "answer_v1"
 FIX_PROMPT_VERSION = "fix_v1"
+RAG_SQL_PROMPT_VERSION = "sql_v2"   # sql_v1 + retrieved examples
+
+# RAG: retrieve the k most similar verified examples with Gemini embeddings + FAISS.
+RAG_K = 3
+EXAMPLES_PATH = ROOT / "examples" / "examples.yaml"
+INDEX_DIR = DATA_DIR / "index"
+EMBEDDING_TASK_TYPE = "SEMANTIC_SIMILARITY"   # we compare question with question, so the same task type on both sides
+EMBED_BATCH_SIZE = 50
 
 # Agent loop: after a failed attempt, send the SQL + error back to the LLM. 2 retries = 3 attempts at most.
 MAX_RETRIES = 2

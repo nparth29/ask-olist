@@ -9,17 +9,27 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from ask_olist import config, db, guard, llm
+from ask_olist import config, db, guard, llm, retrieval
 
 
 def _read_prompt(version: str) -> str:
     return (config.PROMPTS_DIR / f"{version}.txt").read_text(encoding="utf-8")
 
 
-def build_sql_prompt(question: str) -> str:
+def format_examples(examples: list[retrieval.Retrieved]) -> str:
+    blocks = [f"Example {n}\nQuestion: {ex.question}\nSQL:\n{ex.sql}" for n, ex in enumerate(examples, 1)]
+    return "\n\n".join(blocks)
+
+
+def build_sql_prompt(question: str, examples: list[retrieval.Retrieved] | None = None) -> tuple[str, str]:
+    """Returns (prompt, prompt_version). With examples it is the RAG prompt (sql_v2), otherwise zero-shot (sql_v1)."""
     schema = config.SCHEMA_PATH.read_text(encoding="utf-8")
+    version = config.RAG_SQL_PROMPT_VERSION if examples else config.SQL_PROMPT_VERSION
     # str.replace, not str.format: the prompt contains literal { } for the JSON example.
-    return _read_prompt(config.SQL_PROMPT_VERSION).replace("{schema}", schema).replace("{question}", question)
+    prompt = _read_prompt(version).replace("{schema}", schema).replace("{question}", question)
+    if examples:
+        prompt = prompt.replace("{examples}", format_examples(examples))
+    return prompt, version
 
 
 def build_fix_prompt(question: str, previous_sql: str, error: str) -> str:
@@ -59,9 +69,10 @@ def _log_attempt(entry: dict[str, Any]) -> None:
         f.write(json.dumps(entry, default=str) + "\n")
 
 
-def ask(question: str) -> dict[str, Any]:
+def ask(question: str, use_rag: bool = True) -> dict[str, Any]:
     started = time.perf_counter()
-    prompt, prompt_version = build_sql_prompt(question), config.SQL_PROMPT_VERSION
+    retrieved = retrieval.retrieve(question) if use_rag else []   # RAG: top-k similar verified examples
+    prompt, prompt_version = build_sql_prompt(question, retrieved)
     sql, assumptions = "", []
     result: db.QueryResult | None = None
     attempt = 0
@@ -83,6 +94,7 @@ def ask(question: str) -> dict[str, Any]:
             "question": question,
             "attempt": attempt,
             "prompt_version": prompt_version,
+            "retrieved_example_ids": [ex.id for ex in retrieved],
             "sql": sql,
             "error": error,
             "ok": error is None,
@@ -107,6 +119,6 @@ def ask(question: str) -> dict[str, Any]:
         "columns": columns,
         "rows": rows,
         "attempts": attempt,
-        "retrieved_example_ids": [],
+        "retrieved_example_ids": [ex.id for ex in retrieved],
         "latency_s": round(time.perf_counter() - started, 2),
     }

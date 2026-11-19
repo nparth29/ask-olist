@@ -8,9 +8,10 @@ from ask_olist import pipeline
 def main() -> int:
     parser = argparse.ArgumentParser(prog="ask_olist", description="Ask the Olist database a question in English.")
     parser.add_argument("question", help="your question, in quotes")
+    parser.add_argument("--no-rag", action="store_true", help="zero-shot: do not add retrieved examples to the prompt")
     args = parser.parse_args()
 
-    out = pipeline.ask(args.question)
+    out = pipeline.ask(args.question, use_rag=not args.no_rag)
 
     print("\nANSWER\n" + out["answer"])
     print("\nSQL\n" + out["sql"])
@@ -22,6 +23,8 @@ def main() -> int:
         print(" | ".join(out["columns"]))
         for row in out["rows"]:
             print(" | ".join("NULL" if v is None else str(v) for v in row))
+    if out["retrieved_example_ids"]:
+        print("\nRETRIEVED EXAMPLES:", ", ".join(out["retrieved_example_ids"]))
     print(f"\n(attempts: {out['attempts']}, latency: {out['latency_s']}s)")
     return 0
 

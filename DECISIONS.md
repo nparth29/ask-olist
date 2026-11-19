@@ -99,3 +99,19 @@ One entry per choice: what we chose, the main alternative, and why (written for 
 - **Test:** on 20 Nov 2026, after the Flash daily quota was used up, one `gemini-embedding-001` call succeeded (3072 numbers per vector, 0.9 s).
 - **What this shows:** embeddings are not blocked by the exhausted generate-content quota, so building the example index should work today.
 - **What it does not show:** the embedding model's own daily limit. One call cannot reveal that, so we will cache every embedding (rule 6) and embed each text once.
+
+## D20. What RAG means here: embeddings, FAISS, cosine similarity
+- **Chosen:** every verified example question is turned into a vector of 3072 numbers (an *embedding*) by `gemini-embedding-001`. Questions with similar meaning get vectors that point in similar directions. We scale each vector to length 1 and store them in a FAISS `IndexFlatIP`. For a new question we embed it the same way and FAISS returns the 3 stored vectors with the highest inner product. For length-1 vectors the inner product *is* the cosine similarity (1.0 = same meaning, 0 = unrelated). The 3 examples (question and SQL) go into the prompt.
+- **Alternative:** a fixed set of examples in every prompt, or keyword search (matching words).
+- **Why it helps:** the model sees working SQL for questions like the one it must answer, including how the trap rules are applied (CTEs, `customer_unique_id`, delivered filter). Keyword search would miss "slow delivery" against "late delivery"; embeddings match on meaning. With only about 30 vectors an exact search (`IndexFlat`) is fast, so there is no need for an approximate index.
+- **Retrieval test, 20 Nov 2026:** "Which states have the most late deliveries?" retrieved ex05 (similarity 0.9681), ex07 (0.9252) and ex06 (0.8845).
+
+## D21. Embed only the question, and with the SEMANTIC_SIMILARITY task type
+- **Chosen:** the index holds embeddings of the example *questions*. We embed the new question with the same task type (`SEMANTIC_SIMILARITY`) on both sides.
+- **Alternative:** embed question plus SQL, or use the asymmetric `RETRIEVAL_QUERY` / `RETRIEVAL_DOCUMENT` types.
+- **Why:** we are comparing a question with other questions. Adding SQL text to the vector would make the match depend on SQL words instead of what the user asks. Using the same task type on both sides keeps the comparison symmetric. The task type is part of the cache key, so changing it never returns stale vectors.
+
+## D22. Only verified examples are indexed; RAG is on by default
+- **Chosen:** `build_index.py` indexes only examples with `verified: true` (24 of 30 on 20 Nov 2026; ex24 and ex26-ex30 are not yet confirmed). RAG is the default and `--no-rag` gives the zero-shot prompt (`sql_v1`) for comparison. With RAG the prompt is `sql_v2`; a new prompt file means a new cache key.
+- **Alternative:** index every drafted example without checking it.
+- **Why:** a wrong example teaches a wrong pattern, and then the evaluation would measure our own mistakes. The `--no-rag` flag is how we compare configurations A (zero-shot) and B (RAG) in Phase 5.

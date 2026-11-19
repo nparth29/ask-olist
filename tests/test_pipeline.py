@@ -43,7 +43,7 @@ def read_log(tmp_path):
 def test_retry_after_sql_error(env, monkeypatch):
     calls = mock_llm(monkeypatch, ["SELECT missing_column FROM t", "SELECT COUNT(*) AS n FROM t"])
 
-    out = pipeline.ask("How many rows?")
+    out = pipeline.ask("How many rows?", use_rag=False)
 
     assert out["attempts"] == 2
     assert out["rows"] == [[3]]
@@ -61,7 +61,7 @@ def test_retry_after_sql_error(env, monkeypatch):
 def test_retry_after_guard_rejection(env, monkeypatch):
     calls = mock_llm(monkeypatch, ["DROP TABLE t", "SELECT COUNT(*) AS n FROM t"])
 
-    out = pipeline.ask("How many rows?")
+    out = pipeline.ask("How many rows?", use_rag=False)
 
     assert out["attempts"] == 2 and out["rows"] == [[3]]
     assert "GuardError" in calls[1][1]
@@ -72,7 +72,7 @@ def test_retry_after_guard_rejection(env, monkeypatch):
 def test_gives_up_after_two_retries(env, monkeypatch):
     calls = mock_llm(monkeypatch, ["SELECT x FROM t", "SELECT y FROM t", "SELECT z FROM t"])
 
-    out = pipeline.ask("How many rows?")
+    out = pipeline.ask("How many rows?", use_rag=False)
 
     assert out["attempts"] == 3          # 1 first try + 2 retries
     assert len(calls) == 3
@@ -82,7 +82,7 @@ def test_gives_up_after_two_retries(env, monkeypatch):
 
 def test_no_retry_when_first_attempt_works(env, monkeypatch):
     calls = mock_llm(monkeypatch, ["SELECT COUNT(*) AS n FROM t"])
-    out = pipeline.ask("How many rows?")
+    out = pipeline.ask("How many rows?", use_rag=False)
     assert out["attempts"] == 1 and len(calls) == 1
 
 
