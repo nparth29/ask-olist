@@ -352,7 +352,7 @@
   question: "On average, how many hours pass between purchase and payment approval?"
   tables: [orders]
   traps: []
-  verified: false
+  verified: true
   sql: |
     SELECT ROUND(AVG((julianday(order_approved_at) - julianday(order_purchase_timestamp)) * 24), 1) AS avg_hours_to_approval
     FROM orders
@@ -375,7 +375,7 @@
   question: "On which day of the week are most orders placed?"
   tables: [orders]
   traps: []
-  verified: false
+  verified: true
   sql: |
     SELECT CASE strftime('%w', order_purchase_timestamp)
              WHEN '0' THEN 'Sunday' WHEN '1' THEN 'Monday' WHEN '2' THEN 'Tuesday'
@@ -390,7 +390,7 @@
   question: "How many customers live in the city of sao paulo?"
   tables: [customers]
   traps: [2]
-  verified: false
+  verified: true
   sql: |
     SELECT COUNT(DISTINCT customer_unique_id) AS customers
     FROM customers
@@ -400,7 +400,7 @@
   question: "How many delivered orders were paid more than 1000 in total?"
   tables: [orders, order_payments]
   traps: [1, 4]
-  verified: false
+  verified: true
   sql: |
     WITH pays AS (
       SELECT order_id, SUM(payment_value) AS pay_total FROM order_payments GROUP BY order_id
@@ -415,7 +415,7 @@
   question: "What is the average latitude of sellers in each seller state?"
   tables: [sellers, geolocation]
   traps: [7]
-  verified: false
+  verified: true
   sql: |
     WITH geo AS (
       SELECT geolocation_zip_code_prefix AS zip, AVG(geolocation_lat) AS lat
@@ -431,8 +431,8 @@
 - id: ex30
   question: "For each review score, how many reviews have a comment message?"
   tables: [order_reviews]
-  traps: [8]
-  verified: false
+  traps: []
+  verified: true
   sql: |
     SELECT review_score,
            COUNT(*) AS reviews,

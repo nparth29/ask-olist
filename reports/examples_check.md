@@ -2,7 +2,7 @@
 
 ## ex01: What was the total product revenue in 2018?
 
-verified: False   traps: [3, 4]   tables: ['orders', 'order_items']
+verified: True   traps: [3, 4]   tables: ['orders', 'order_items']
 
 ```sql
 SELECT ROUND(SUM(oi.price), 2) AS product_revenue
@@ -12,7 +12,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2018'
 ```
 
-1 row(s), 0.74s. First 1:
+1 row(s), 0.68s. First 1:
 
 | product_revenue |
 |---|
@@ -20,7 +20,7 @@ WHERE o.order_status = 'delivered'
 
 ## ex02: What was the total revenue including shipping in 2017?
 
-verified: False   traps: [3, 4]   tables: ['orders', 'order_items']
+verified: True   traps: [3, 4]   tables: ['orders', 'order_items']
 
 ```sql
 SELECT ROUND(SUM(oi.price + oi.freight_value), 2) AS revenue_including_freight
@@ -30,7 +30,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2017'
 ```
 
-1 row(s), 0.63s. First 1:
+1 row(s), 0.56s. First 1:
 
 | revenue_including_freight |
 |---|
@@ -38,7 +38,7 @@ WHERE o.order_status = 'delivered'
 
 ## ex03: How many orders are there in each order status?
 
-verified: False   traps: [4]   tables: ['orders']
+verified: True   traps: [4]   tables: ['orders']
 
 ```sql
 SELECT order_status, COUNT(*) AS orders
@@ -47,7 +47,7 @@ GROUP BY order_status
 ORDER BY orders DESC
 ```
 
-8 row(s), 0.07s. First 8:
+8 row(s), 0.06s. First 8:
 
 | order_status | orders |
 |---|---|
@@ -62,7 +62,7 @@ ORDER BY orders DESC
 
 ## ex04: What are the top 10 product categories by product revenue?
 
-verified: False   traps: [3, 4, 6]   tables: ['orders', 'order_items', 'products', 'category_translation']
+verified: True   traps: [3, 4, 6]   tables: ['orders', 'order_items', 'products', 'category_translation']
 
 ```sql
 SELECT COALESCE(t.product_category_name_english, p.product_category_name, 'unknown') AS category,
@@ -77,7 +77,7 @@ ORDER BY product_revenue DESC
 LIMIT 10
 ```
 
-10 row(s), 2.29s. First 8:
+10 row(s), 2.25s. First 8:
 
 | category | product_revenue |
 |---|---|
@@ -92,7 +92,7 @@ LIMIT 10
 
 ## ex05: Which 5 customer states have the most late deliveries?
 
-verified: False   traps: [5]   tables: ['orders', 'customers']
+verified: True   traps: [5]   tables: ['orders', 'customers']
 
 ```sql
 SELECT c.customer_state, COUNT(*) AS late_orders
@@ -107,7 +107,7 @@ ORDER BY late_orders DESC
 LIMIT 5
 ```
 
-5 row(s), 0.13s. First 5:
+5 row(s), 0.12s. First 5:
 
 | customer_state | late_orders |
 |---|---|
@@ -119,7 +119,7 @@ LIMIT 5
 
 ## ex06: What percentage of delivered orders arrived later than the estimated date?
 
-verified: False   traps: [5]   tables: ['orders']
+verified: True   traps: [5]   tables: ['orders']
 
 ```sql
 SELECT ROUND(100.0 * SUM(order_delivered_customer_date > order_estimated_delivery_date) / COUNT(*), 2) AS pct_late
@@ -137,7 +137,7 @@ WHERE order_status = 'delivered'
 
 ## ex07: Which 5 customer states have the longest average delivery time in days?
 
-verified: False   traps: [4]   tables: ['orders', 'customers']
+verified: True   traps: [4]   tables: ['orders', 'customers']
 
 ```sql
 SELECT c.customer_state,
@@ -151,7 +151,7 @@ ORDER BY avg_delivery_days DESC
 LIMIT 5
 ```
 
-5 row(s), 1.22s. First 5:
+5 row(s), 1.10s. First 5:
 
 | customer_state | avg_delivery_days |
 |---|---|
@@ -163,7 +163,7 @@ LIMIT 5
 
 ## ex08: Which 5 states have the most customers?
 
-verified: False   traps: [2]   tables: ['customers']
+verified: True   traps: [2]   tables: ['customers']
 
 ```sql
 SELECT customer_state, COUNT(DISTINCT customer_unique_id) AS customers
@@ -173,7 +173,7 @@ ORDER BY customers DESC
 LIMIT 5
 ```
 
-5 row(s), 0.15s. First 5:
+5 row(s), 0.14s. First 5:
 
 | customer_state | customers |
 |---|---|
@@ -185,7 +185,7 @@ LIMIT 5
 
 ## ex09: What percentage of customers have placed more than one order?
 
-verified: False   traps: [2]   tables: ['orders', 'customers']
+verified: True   traps: [2]   tables: ['orders', 'customers']
 
 ```sql
 SELECT ROUND(100.0 * SUM(order_count > 1) / COUNT(*), 2) AS pct_repeat_customers
@@ -197,7 +197,7 @@ FROM (
 )
 ```
 
-1 row(s), 1.08s. First 1:
+1 row(s), 1.04s. First 1:
 
 | pct_repeat_customers |
 |---|
@@ -205,7 +205,7 @@ FROM (
 
 ## ex10: What is the average order value in product revenue?
 
-verified: False   traps: [1, 3, 4]   tables: ['orders', 'order_items']
+verified: True   traps: [1, 3, 4]   tables: ['orders', 'order_items']
 
 ```sql
 SELECT ROUND(AVG(order_total), 2) AS avg_order_value
@@ -218,7 +218,7 @@ FROM (
 )
 ```
 
-1 row(s), 0.75s. First 1:
+1 row(s), 0.72s. First 1:
 
 | avg_order_value |
 |---|
@@ -226,7 +226,7 @@ FROM (
 
 ## ex11: What is the average number of installments for credit card payments?
 
-verified: False   traps: []   tables: ['order_payments']
+verified: True   traps: []   tables: ['order_payments']
 
 ```sql
 SELECT ROUND(AVG(payment_installments), 2) AS avg_installments
@@ -242,7 +242,7 @@ WHERE payment_type = 'credit_card'
 
 ## ex12: For each month of 2017, what were the product revenue and the total amount paid?
 
-verified: False   traps: [1, 3, 4]   tables: ['orders', 'order_items', 'order_payments']
+verified: True   traps: [1, 3, 4]   tables: ['orders', 'order_items', 'order_payments']
 
 ```sql
 WITH items AS (
@@ -263,7 +263,7 @@ GROUP BY month
 ORDER BY month
 ```
 
-12 row(s), 1.49s. First 8:
+12 row(s), 1.41s. First 8:
 
 | month | product_revenue | total_paid |
 |---|---|---|
@@ -278,7 +278,7 @@ ORDER BY month
 
 ## ex13: How many orders were paid with more than one payment?
 
-verified: False   traps: [1]   tables: ['order_payments']
+verified: True   traps: [1]   tables: ['order_payments']
 
 ```sql
 SELECT COUNT(*) AS orders_with_multiple_payments
@@ -298,7 +298,7 @@ FROM (
 
 ## ex14: What is the average review score?
 
-verified: False   traps: [8]   tables: ['order_reviews']
+verified: True   traps: [8]   tables: ['order_reviews']
 
 ```sql
 SELECT ROUND(AVG(order_score), 2) AS avg_review_score
@@ -309,7 +309,7 @@ FROM (
 )
 ```
 
-1 row(s), 0.59s. First 1:
+1 row(s), 0.58s. First 1:
 
 | avg_review_score |
 |---|
@@ -317,7 +317,7 @@ FROM (
 
 ## ex15: Which 5 sellers have the highest average review score, among sellers with at least 30 reviewed orders?
 
-verified: False   traps: [8]   tables: ['order_items', 'order_reviews']
+verified: True   traps: [8]   tables: ['order_items', 'order_reviews']
 
 ```sql
 WITH seller_orders AS (
@@ -337,7 +337,7 @@ ORDER BY avg_score DESC, reviewed_orders DESC
 LIMIT 5
 ```
 
-5 row(s), 0.97s. First 5:
+5 row(s), 0.93s. First 5:
 
 | seller_id | avg_score | reviewed_orders |
 |---|---|---|
@@ -349,7 +349,7 @@ LIMIT 5
 
 ## ex16: Which 5 product categories have the lowest average review score, among categories with at least 100 reviewed orders?
 
-verified: False   traps: [6, 8]   tables: ['order_items', 'products', 'order_reviews', 'category_translation']
+verified: True   traps: [6, 8]   tables: ['order_items', 'products', 'order_reviews', 'category_translation']
 
 ```sql
 WITH order_cat AS (
@@ -372,7 +372,7 @@ ORDER BY avg_score ASC
 LIMIT 5
 ```
 
-5 row(s), 1.63s. First 5:
+5 row(s), 1.58s. First 5:
 
 | category | avg_score | reviewed_orders |
 |---|---|---|
@@ -384,7 +384,7 @@ LIMIT 5
 
 ## ex17: What was the product revenue in each month of 2018?
 
-verified: False   traps: [3, 4]   tables: ['orders', 'order_items']
+verified: True   traps: [3, 4]   tables: ['orders', 'order_items']
 
 ```sql
 SELECT strftime('%Y-%m', o.order_purchase_timestamp) AS month,
@@ -412,7 +412,7 @@ ORDER BY month
 
 ## ex18: Who are the top 10 sellers by product revenue?
 
-verified: False   traps: [3, 4]   tables: ['orders', 'order_items', 'sellers']
+verified: True   traps: [3, 4]   tables: ['orders', 'order_items', 'sellers']
 
 ```sql
 SELECT oi.seller_id, s.seller_state, ROUND(SUM(oi.price), 2) AS product_revenue
@@ -425,7 +425,7 @@ ORDER BY product_revenue DESC
 LIMIT 10
 ```
 
-10 row(s), 1.35s. First 8:
+10 row(s), 1.32s. First 8:
 
 | seller_id | seller_state | product_revenue |
 |---|---|---|
@@ -440,7 +440,7 @@ LIMIT 10
 
 ## ex19: Which 5 states have the most sellers?
 
-verified: False   traps: []   tables: ['sellers']
+verified: True   traps: []   tables: ['sellers']
 
 ```sql
 SELECT seller_state, COUNT(*) AS sellers
@@ -462,7 +462,7 @@ LIMIT 5
 
 ## ex20: Which 5 product categories have the most different products?
 
-verified: False   traps: [6]   tables: ['products', 'category_translation']
+verified: True   traps: [6]   tables: ['products', 'category_translation']
 
 ```sql
 SELECT COALESCE(t.product_category_name_english, p.product_category_name, 'unknown') AS category,
@@ -486,7 +486,7 @@ LIMIT 5
 
 ## ex21: Which 5 product categories have the heaviest products on average, among categories with at least 20 products?
 
-verified: False   traps: [6]   tables: ['products', 'category_translation']
+verified: True   traps: [6]   tables: ['products', 'category_translation']
 
 ```sql
 SELECT COALESCE(t.product_category_name_english, p.product_category_name) AS category,
@@ -501,7 +501,7 @@ ORDER BY avg_weight_g DESC
 LIMIT 5
 ```
 
-5 row(s), 0.05s. First 5:
+5 row(s), 0.04s. First 5:
 
 | category | avg_weight_g |
 |---|---|
@@ -513,7 +513,7 @@ LIMIT 5
 
 ## ex22: In which 5 customer states is freight the biggest share of the product price?
 
-verified: False   traps: [3, 4]   tables: ['orders', 'order_items', 'customers']
+verified: True   traps: [3, 4]   tables: ['orders', 'order_items', 'customers']
 
 ```sql
 SELECT c.customer_state,
@@ -527,7 +527,7 @@ ORDER BY freight_pct_of_price DESC
 LIMIT 5
 ```
 
-5 row(s), 2.39s. First 5:
+5 row(s), 2.34s. First 5:
 
 | customer_state | freight_pct_of_price |
 |---|---|
@@ -539,7 +539,7 @@ LIMIT 5
 
 ## ex23: How many orders arrived more than 7 days after the estimated delivery date?
 
-verified: False   traps: [5]   tables: ['orders']
+verified: True   traps: [5]   tables: ['orders']
 
 ```sql
 SELECT COUNT(*) AS orders_late_over_7_days
@@ -558,24 +558,23 @@ WHERE order_status = 'delivered'
 
 ## ex24: On average, how many hours pass between purchase and payment approval?
 
-verified: False   traps: [4]   tables: ['orders']
+verified: True   traps: []   tables: ['orders']
 
 ```sql
 SELECT ROUND(AVG((julianday(order_approved_at) - julianday(order_purchase_timestamp)) * 24), 1) AS avg_hours_to_approval
 FROM orders
-WHERE order_status = 'delivered'
-  AND order_approved_at IS NOT NULL
+WHERE order_approved_at IS NOT NULL
 ```
 
 1 row(s), 0.05s. First 1:
 
 | avg_hours_to_approval |
 |---|
-| 10.3 |
+| 10.4 |
 
 ## ex25: How many delivered orders were handed to the carrier after the seller's shipping limit date?
 
-verified: False   traps: [4]   tables: ['orders', 'order_items']
+verified: True   traps: [4]   tables: ['orders', 'order_items']
 
 ```sql
 SELECT COUNT(DISTINCT oi.order_id) AS orders_with_late_handover
@@ -594,7 +593,7 @@ WHERE o.order_status = 'delivered'
 
 ## ex26: On which day of the week are most orders placed?
 
-verified: False   traps: []   tables: ['orders']
+verified: True   traps: []   tables: ['orders']
 
 ```sql
 SELECT CASE strftime('%w', order_purchase_timestamp)
@@ -607,7 +606,7 @@ GROUP BY weekday
 ORDER BY orders DESC
 ```
 
-7 row(s), 0.12s. First 7:
+7 row(s), 0.11s. First 7:
 
 | weekday | orders |
 |---|---|
@@ -621,7 +620,7 @@ ORDER BY orders DESC
 
 ## ex27: How many customers live in the city of sao paulo?
 
-verified: False   traps: [2]   tables: ['customers']
+verified: True   traps: [2]   tables: ['customers']
 
 ```sql
 SELECT COUNT(DISTINCT customer_unique_id) AS customers
@@ -629,7 +628,7 @@ FROM customers
 WHERE customer_city = 'sao paulo'
 ```
 
-1 row(s), 0.50s. First 1:
+1 row(s), 0.48s. First 1:
 
 | customers |
 |---|
@@ -637,7 +636,7 @@ WHERE customer_city = 'sao paulo'
 
 ## ex28: How many delivered orders were paid more than 1000 in total?
 
-verified: False   traps: [1, 4]   tables: ['orders', 'order_payments']
+verified: True   traps: [1, 4]   tables: ['orders', 'order_payments']
 
 ```sql
 WITH pays AS (
@@ -650,7 +649,7 @@ WHERE o.order_status = 'delivered'
   AND pays.pay_total > 1000
 ```
 
-1 row(s), 0.50s. First 1:
+1 row(s), 0.48s. First 1:
 
 | orders_over_1000 |
 |---|
@@ -658,7 +657,7 @@ WHERE o.order_status = 'delivered'
 
 ## ex29: What is the average latitude of sellers in each seller state?
 
-verified: False   traps: [7]   tables: ['sellers', 'geolocation']
+verified: True   traps: [7]   tables: ['sellers', 'geolocation']
 
 ```sql
 WITH geo AS (
@@ -673,7 +672,7 @@ GROUP BY s.seller_state
 ORDER BY s.seller_state
 ```
 
-23 row(s), 0.59s. First 8:
+23 row(s), 0.54s. First 8:
 
 | seller_state | avg_latitude |
 |---|---|
@@ -688,7 +687,7 @@ ORDER BY s.seller_state
 
 ## ex30: For each review score, how many reviews have a comment message?
 
-verified: False   traps: [8]   tables: ['order_reviews']
+verified: True   traps: []   tables: ['order_reviews']
 
 ```sql
 SELECT review_score,
@@ -711,6 +710,6 @@ ORDER BY review_score
 
 ## Coverage
 
-- examples: 30, verified: 0, failed to run: 0
+- examples: 30, verified: 30, failed to run: 0
 - tables not covered: none
 - traps not covered: none

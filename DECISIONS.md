@@ -115,3 +115,5 @@ One entry per choice: what we chose, the main alternative, and why (written for 
 - **Chosen:** `build_index.py` indexes only examples with `verified: true` (24 of 30 on 20 Nov 2026; ex24 and ex26-ex30 are not yet confirmed). RAG is the default and `--no-rag` gives the zero-shot prompt (`sql_v1`) for comparison. With RAG the prompt is `sql_v2`; a new prompt file means a new cache key.
 - **Alternative:** index every drafted example without checking it.
 - **Why:** a wrong example teaches a wrong pattern, and then the evaluation would measure our own mistakes. The `--no-rag` flag is how we compare configurations A (zero-shot) and B (RAG) in Phase 5.
+
+**Update to D22 (20 Nov 2026):** Parth verified the last six examples (ex24, ex26-ex30), so all 30 are indexed. ex24 had its `delivered` filter removed (approval time is not a sales question, so rule 4 does not apply), and ex30 was re-tagged `traps: []` because it counts review rows and never averages per order. All 8 traps are still covered by other examples.
