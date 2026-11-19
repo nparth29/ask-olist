@@ -306,7 +306,7 @@
   question: "Which 5 product categories have the heaviest products on average, among categories with at least 20 products?"
   tables: [products, category_translation]
   traps: [6]
-  verified: false
+  verified: true
   sql: |
     SELECT COALESCE(t.product_category_name_english, p.product_category_name) AS category,
            ROUND(AVG(p.product_weight_g), 0) AS avg_weight_g
@@ -323,7 +323,7 @@
   question: "In which 5 customer states is freight the biggest share of the product price?"
   tables: [orders, order_items, customers]
   traps: [3, 4]
-  verified: false
+  verified: true
   sql: |
     SELECT c.customer_state,
            ROUND(100.0 * SUM(oi.freight_value) / SUM(oi.price), 1) AS freight_pct_of_price
@@ -339,7 +339,7 @@
   question: "How many orders arrived more than 7 days after the estimated delivery date?"
   tables: [orders]
   traps: [5]
-  verified: false
+  verified: true
   sql: |
     SELECT COUNT(*) AS orders_late_over_7_days
     FROM orders
@@ -351,19 +351,18 @@
 - id: ex24
   question: "On average, how many hours pass between purchase and payment approval?"
   tables: [orders]
-  traps: [4]
+  traps: []
   verified: false
   sql: |
     SELECT ROUND(AVG((julianday(order_approved_at) - julianday(order_purchase_timestamp)) * 24), 1) AS avg_hours_to_approval
     FROM orders
-    WHERE order_status = 'delivered'
-      AND order_approved_at IS NOT NULL
+    WHERE order_approved_at IS NOT NULL
 
 - id: ex25
   question: "How many delivered orders were handed to the carrier after the seller's shipping limit date?"
   tables: [orders, order_items]
   traps: [4]
-  verified: false
+  verified: true
   sql: |
     SELECT COUNT(DISTINCT oi.order_id) AS orders_with_late_handover
     FROM order_items oi
