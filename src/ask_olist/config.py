@@ -26,6 +26,10 @@ SCHEMA_PATH = ROOT / "schema" / "schema.md"
 # Prompt versions: changing a prompt's wording means a NEW version file (and so a new cache key).
 SQL_PROMPT_VERSION = "sql_v1"
 ANSWER_PROMPT_VERSION = "answer_v1"
+FIX_PROMPT_VERSION = "fix_v1"
+
+# Agent loop: after a failed attempt, send the SQL + error back to the LLM. 2 retries = 3 attempts at most.
+MAX_RETRIES = 2
 
 # Query limits (rule: the app only ever reads).
 MAX_ROWS = 1000

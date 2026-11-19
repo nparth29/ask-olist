@@ -73,3 +73,14 @@ One entry per choice: what we chose, the main alternative, and why (written for 
 ## D14. Free-tier daily limit
 - **What happened:** on 20 Nov 2026 Gemini returned `429 ... requests per day limit exceeded on Free Tier, limit: 20`. The message named `gemini-3.6-flash`, although `config.py` uses `gemini-3.5-flash`; we have not found out why.
 - **Impact:** every question costs 2 LLM calls (SQL, then answer), plus retries. About 20 calls a day is roughly 10 questions a day. The Phase 5 evaluation (30 questions x 2 configurations) will not fit in one day. This is open and needs Parth's decision.
+
+## D15. The agent loop: feed the error back, max 2 retries
+- **Chosen:** if the guard rejects the SQL or SQLite raises an error, we send Gemini its own SQL plus the exact error (`prompts/fix_v1.txt`) and run the new answer through the same guard and read-only connection. At most 2 retries (3 attempts in total). Every attempt is written to `logs/runs.jsonl`.
+- **Alternative:** give up on the first error, or keep retrying until it works.
+- **Why it works:** most first-attempt failures are small (a wrong column name, a missing alias). The error message says exactly what is wrong, and the model can see the schema and its own mistake, so it can fix it. **Why only 2:** if the model has not fixed it after two tries it is usually misunderstanding the question, and more tries only burn time and free-tier quota. The retry never skips the guard.
+- **Tested with a mock** (`tests/test_pipeline.py`): bad first SQL, good second SQL; a DROP rejected by the guard and then fixed; and giving up after 3 failed attempts.
+
+## D16. Fail fast when Google says "retry in hours"
+- **Chosen:** if a 429/503/504 error says to wait more than 60 seconds (Google's `retryDelay`), we raise at once instead of backing off. Short delays still use 2 s, 4 s, 8 s ... backoff.
+- **Alternative:** always back off up to 5 times.
+- **Why:** the free-tier daily quota says to wait about 12 hours. Retrying wastes about a minute per call and cannot succeed. Tested in `tests/test_pipeline.py`.

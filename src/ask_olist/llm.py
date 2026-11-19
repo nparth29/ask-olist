@@ -1,5 +1,6 @@
 """Gemini calls: disk-cached, with exponential backoff on rate-limit / overload errors."""
 import json
+import re
 import time
 from typing import Any
 
@@ -26,6 +27,17 @@ def _get_client() -> genai.Client:
     return _client
 
 
+# If Google itself says "retry in more than this many seconds", waiting a few seconds will not help
+# (for example the free-tier DAILY quota says ~12 hours), so we fail fast instead of sleeping in vain.
+MAX_USEFUL_WAIT_S = 60
+
+
+def retry_delay_seconds(exc: Exception) -> float | None:
+    """Seconds Google asks us to wait (from its RetryInfo, e.g. 'retryDelay': '41799s'), or None."""
+    match = re.search(r"retryDelay\W+(\d+(?:\.\d+)?)s", str(exc))
+    return float(match.group(1)) if match else None
+
+
 def _call_with_backoff(make_call):
     delay = 2.0
     for attempt in range(config.LLM_MAX_RETRIES + 1):
@@ -33,6 +45,9 @@ def _call_with_backoff(make_call):
             return make_call()
         except errors.APIError as exc:
             if exc.code not in RETRYABLE_CODES or attempt == config.LLM_MAX_RETRIES:
+                raise
+            asked = retry_delay_seconds(exc)
+            if asked is not None and asked > MAX_USEFUL_WAIT_S:
                 raise
             time.sleep(delay)
             delay *= 2  # 2s, 4s, 8s, ...

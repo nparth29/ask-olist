@@ -1,4 +1,8 @@
-"""One question, start to finish: prompt -> Gemini -> guard -> read-only run -> plain-English answer."""
+"""One question, start to finish: prompt -> Gemini -> guard -> read-only run -> plain-English answer.
+
+If the SQL is rejected by the guard or fails to run, the error is sent back to Gemini to fix it
+(the "agent" loop, max config.MAX_RETRIES retries).
+"""
 import json
 import sqlite3
 import time
@@ -16,6 +20,17 @@ def build_sql_prompt(question: str) -> str:
     schema = config.SCHEMA_PATH.read_text(encoding="utf-8")
     # str.replace, not str.format: the prompt contains literal { } for the JSON example.
     return _read_prompt(config.SQL_PROMPT_VERSION).replace("{schema}", schema).replace("{question}", question)
+
+
+def build_fix_prompt(question: str, previous_sql: str, error: str) -> str:
+    schema = config.SCHEMA_PATH.read_text(encoding="utf-8")
+    return (
+        _read_prompt(config.FIX_PROMPT_VERSION)
+        .replace("{schema}", schema)
+        .replace("{question}", question)
+        .replace("{previous_sql}", previous_sql)
+        .replace("{error}", error)
+    )
 
 
 def _format_rows(columns: list[str], rows: list[tuple]) -> str:
@@ -46,25 +61,40 @@ def _log_attempt(entry: dict[str, Any]) -> None:
 
 def ask(question: str) -> dict[str, Any]:
     started = time.perf_counter()
-    sql, assumptions, error = "", [], None
+    prompt, prompt_version = build_sql_prompt(question), config.SQL_PROMPT_VERSION
+    sql, assumptions = "", []
     result: db.QueryResult | None = None
+    attempt = 0
 
-    try:
-        generated = llm.generate_sql_json(build_sql_prompt(question), config.SQL_PROMPT_VERSION)
-        sql = generated["sql"]
-        assumptions = generated.get("assumptions", [])
-        sql = guard.check_sql(sql)
-        result = db.run_query(sql)
-    except (guard.GuardError, sqlite3.Error) as exc:
-        error = f"{type(exc).__name__}: {exc}"
+    while True:
+        attempt += 1
+        error = None
+        try:
+            generated = llm.generate_sql_json(prompt, prompt_version)
+            sql = generated["sql"]
+            assumptions = generated.get("assumptions", [])
+            sql = guard.check_sql(sql)
+            result = db.run_query(sql)
+        except (guard.GuardError, sqlite3.Error) as exc:
+            error = f"{type(exc).__name__}: {exc}"
 
-    _log_attempt({
-        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "question": question, "attempt": 1, "sql": sql, "error": error, "ok": error is None,
-    })
+        _log_attempt({
+            "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "question": question,
+            "attempt": attempt,
+            "prompt_version": prompt_version,
+            "sql": sql,
+            "error": error,
+            "ok": error is None,
+        })
 
-    if result is None:
-        answer = f"Sorry, I could not run a valid query for this question. ({error})"
+        if error is None or attempt > config.MAX_RETRIES:
+            break
+        # The agent step: show the model its own SQL and the error, and ask for a fix.
+        prompt, prompt_version = build_fix_prompt(question, sql, error), config.FIX_PROMPT_VERSION
+
+    if error is not None:
+        answer = f"Sorry, I could not run a valid query for this question after {attempt} attempts. ({error})"
         rows, columns = [], []
     else:
         answer = llm.generate_text(build_answer_prompt(question, sql, assumptions, result), config.ANSWER_PROMPT_VERSION)
@@ -76,7 +106,7 @@ def ask(question: str) -> dict[str, Any]:
         "assumptions": assumptions,
         "columns": columns,
         "rows": rows,
-        "attempts": 1,
+        "attempts": attempt,
         "retrieved_example_ids": [],
         "latency_s": round(time.perf_counter() - started, 2),
     }
