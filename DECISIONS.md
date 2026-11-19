@@ -84,3 +84,18 @@ One entry per choice: what we chose, the main alternative, and why (written for 
 - **Chosen:** if a 429/503/504 error says to wait more than 60 seconds (Google's `retryDelay`), we raise at once instead of backing off. Short delays still use 2 s, 4 s, 8 s ... backoff.
 - **Alternative:** always back off up to 5 times.
 - **Why:** the free-tier daily quota says to wait about 12 hours. Retrying wastes about a minute per call and cannot succeed. Tested in `tests/test_pipeline.py`.
+
+## D17. Run `ANALYZE` when building the database
+- **Chosen:** `build_db.py` runs `ANALYZE` once after loading and indexing. This stores table statistics in the database file.
+- **Alternative:** nothing (SQLite's default), or letting the app run ANALYZE.
+- **Why:** without statistics SQLite chose a very slow join plan for a simple "top 10 sellers by revenue" query: for every item row it built a temporary index on `orders(order_status)` instead of using the `order_id` index. The query hit our 10 second timeout. With statistics it runs in well under a second. We run it at build time because the app must never write to the database.
+
+## D18. 30 drafted examples, checked by a human
+- **Chosen:** `examples/examples.yaml` was drafted first (30 question and SQL pairs, all `verified: false`). `scripts/check_examples.py` runs each on the read-only database and writes `reports/examples_check.md`. Only Parth sets `verified: true`; only verified examples go into the RAG index.
+- **Alternative:** let the LLM write the examples and index them straight away.
+- **Why:** examples teach the model by showing correct SQL. A wrong example would teach a wrong pattern, and the evaluation would then be measuring our own mistakes. They cover all 9 tables and all 8 traps (each has a `traps` list). The script also checks the numbers against Phase 1 where they overlap (for example 2,961 orders with several payments).
+
+## D19. Embedding quota is separate from the LLM quota (one test call)
+- **Test:** on 20 Nov 2026, after the Flash daily quota was used up, one `gemini-embedding-001` call succeeded (3072 numbers per vector, 0.9 s).
+- **What this shows:** embeddings are not blocked by the exhausted generate-content quota, so building the example index should work today.
+- **What it does not show:** the embedding model's own daily limit. One call cannot reveal that, so we will cache every embedding (rule 6) and embed each text once.

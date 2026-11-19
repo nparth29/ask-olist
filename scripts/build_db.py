@@ -103,6 +103,9 @@ def main() -> None:
         db_count = con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
         rows.append((csv_name, table, len(df), db_count))
         print(f"{table}: csv={len(df)} db={db_count}")
+    # Without table statistics SQLite can pick terrible join plans (a top-sellers query took > 10 s).
+    # ANALYZE runs once here, at build time; the app only ever reads.
+    con.execute("ANALYZE")
     con.commit()
     con.close()
 
