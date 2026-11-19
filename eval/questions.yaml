@@ -340,15 +340,16 @@
       AND o.order_delivered_customer_date > o.order_estimated_delivery_date
 
 - id: q25
-  question: "How many customers placed their second order within 30 days of their first order?"
+  question: "How many customers placed a second order at a later time than their first, within 30 days of it?"
   difficulty: hard
   traps: [2]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     WITH customer_orders AS (
       SELECT c.customer_unique_id, o.order_purchase_timestamp AS ts,
-             ROW_NUMBER() OVER (PARTITION BY c.customer_unique_id ORDER BY o.order_purchase_timestamp) AS rn
+             ROW_NUMBER() OVER (PARTITION BY c.customer_unique_id
+                                ORDER BY o.order_purchase_timestamp, o.order_id) AS rn
       FROM orders o
       JOIN customers c ON c.customer_id = o.customer_id
     )
@@ -358,14 +359,15 @@
       ON second_order.customer_unique_id = first_order.customer_unique_id
      AND first_order.rn = 1
      AND second_order.rn = 2
-    WHERE julianday(second_order.ts) - julianday(first_order.ts) <= 30
+    WHERE second_order.ts > first_order.ts
+      AND julianday(second_order.ts) - julianday(first_order.ts) <= 30
 
 - id: q26
   question: "Which 3 sellers have the highest percentage of late deliveries, among sellers with at least 50 delivered orders?"
   difficulty: hard
   traps: [4, 5]
   order_matters: true
-  verified: false
+  verified: true
   gold_sql: |
     WITH seller_orders AS (
       SELECT DISTINCT oi.seller_id, o.order_id,
@@ -388,7 +390,7 @@
   difficulty: hard
   traps: [1, 8]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     WITH scores AS (
       SELECT order_id, AVG(review_score) AS score FROM order_reviews GROUP BY order_id
@@ -407,7 +409,7 @@
   difficulty: hard
   traps: [4, 6]
   order_matters: true
-  verified: false
+  verified: true
   gold_sql: |
     WITH items AS (
       SELECT COALESCE(t.product_category_name_english, p.product_category_name) AS category,
@@ -433,7 +435,7 @@
   difficulty: hard
   traps: [2, 3, 4]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     WITH spend AS (
       SELECT c.customer_unique_id, SUM(oi.price) AS total
@@ -452,7 +454,7 @@
   difficulty: hard
   traps: [7]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(*) AS sellers_without_geolocation
     FROM sellers s

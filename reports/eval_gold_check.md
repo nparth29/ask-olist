@@ -71,7 +71,7 @@ SELECT ROUND(AVG(freight_value), 2) AS avg_freight_per_item
 FROM order_items
 ```
 
-1 row(s), 0.03s. First 1:
+1 row(s), 0.02s. First 1:
 
 | avg_freight_per_item |
 |---|
@@ -119,7 +119,7 @@ JOIN order_items oi ON oi.order_id = o.order_id
 WHERE o.order_status = 'delivered'
 ```
 
-1 row(s), 1.08s. First 1:
+1 row(s), 1.06s. First 1:
 
 | total_freight |
 |---|
@@ -170,7 +170,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2018'
 ```
 
-1 row(s), 0.91s. First 1:
+1 row(s), 0.92s. First 1:
 
 | credit_card_paid |
 |---|
@@ -231,7 +231,7 @@ FROM (
 )
 ```
 
-1 row(s), 2.36s. First 1:
+1 row(s), 2.39s. First 1:
 
 | customers_with_multiple_sellers |
 |---|
@@ -248,7 +248,7 @@ JOIN orders o ON o.order_id = oi.order_id
 WHERE o.order_status = 'delivered'
 ```
 
-1 row(s), 0.77s. First 1:
+1 row(s), 0.76s. First 1:
 
 | avg_items_per_order |
 |---|
@@ -287,7 +287,7 @@ ORDER BY delivered_orders DESC
 LIMIT 5
 ```
 
-5 row(s), 1.62s. First 5:
+5 row(s), 1.64s. First 5:
 
 | seller_id | delivered_orders |
 |---|---|
@@ -362,7 +362,7 @@ WHERE t.product_category_name_english = 'health_beauty'
 
 ## q21 (medium): How many delivered orders placed in 2017 arrived on or before the estimated delivery date?
 
-verified: False   traps: [4, 5]   order matters: False
+verified: True   traps: [4, 5]   order matters: False
 
 ```sql
 SELECT COUNT(*) AS on_time_orders
@@ -382,7 +382,7 @@ WHERE order_status = 'delivered'
 
 ## q22 (medium): Which 5 customer states have the highest average order value in product revenue, among states with at least 100 delivered orders?
 
-verified: False   traps: [1, 3, 4]   order matters: True
+verified: True   traps: [1, 3, 4]   order matters: True
 
 ```sql
 WITH order_totals AS (
@@ -413,7 +413,7 @@ LIMIT 5
 
 ## q23 (hard): For delivered orders placed in 2018, what is the average product revenue per order and the average amount paid per order?
 
-verified: False   traps: [1, 3, 4]   order matters: False
+verified: True   traps: [1, 3, 4]   order matters: False
 
 ```sql
 WITH items AS (
@@ -431,7 +431,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2018'
 ```
 
-1 row(s), 1.36s. First 1:
+1 row(s), 1.37s. First 1:
 
 | avg_product_revenue_per_order | avg_paid_per_order |
 |---|---|
@@ -439,7 +439,7 @@ WHERE o.order_status = 'delivered'
 
 ## q24 (hard): What is the average review score of delivered orders that arrived later than the estimated delivery date?
 
-verified: False   traps: [4, 5, 8]   order matters: False
+verified: True   traps: [4, 5, 8]   order matters: False
 
 ```sql
 WITH scores AS (
@@ -454,20 +454,21 @@ WHERE o.order_status = 'delivered'
   AND o.order_delivered_customer_date > o.order_estimated_delivery_date
 ```
 
-1 row(s), 1.30s. First 1:
+1 row(s), 1.27s. First 1:
 
 | avg_review_score_late_orders |
 |---|
 | 2.57 |
 
-## q25 (hard): How many customers placed their second order within 30 days of their first order?
+## q25 (hard): How many customers placed a second order at a later time than their first, within 30 days of it?
 
-verified: False   traps: [2]   order matters: False
+verified: True   traps: [2]   order matters: False
 
 ```sql
 WITH customer_orders AS (
   SELECT c.customer_unique_id, o.order_purchase_timestamp AS ts,
-         ROW_NUMBER() OVER (PARTITION BY c.customer_unique_id ORDER BY o.order_purchase_timestamp) AS rn
+         ROW_NUMBER() OVER (PARTITION BY c.customer_unique_id
+                            ORDER BY o.order_purchase_timestamp, o.order_id) AS rn
   FROM orders o
   JOIN customers c ON c.customer_id = o.customer_id
 )
@@ -477,18 +478,19 @@ JOIN customer_orders second_order
   ON second_order.customer_unique_id = first_order.customer_unique_id
  AND first_order.rn = 1
  AND second_order.rn = 2
-WHERE julianday(second_order.ts) - julianday(first_order.ts) <= 30
+WHERE second_order.ts > first_order.ts
+  AND julianday(second_order.ts) - julianday(first_order.ts) <= 30
 ```
 
-1 row(s), 2.01s. First 1:
+1 row(s), 2.04s. First 1:
 
 | customers |
 |---|
-| 1530 |
+| 1254 |
 
 ## q26 (hard): Which 3 sellers have the highest percentage of late deliveries, among sellers with at least 50 delivered orders?
 
-verified: False   traps: [4, 5]   order matters: True
+verified: True   traps: [4, 5]   order matters: True
 
 ```sql
 WITH seller_orders AS (
@@ -508,7 +510,7 @@ ORDER BY pct_late DESC
 LIMIT 3
 ```
 
-3 row(s), 2.09s. First 3:
+3 row(s), 2.07s. First 3:
 
 | seller_id | pct_late | delivered_orders |
 |---|---|---|
@@ -518,7 +520,7 @@ LIMIT 3
 
 ## q27 (hard): What is the average review score for each payment type?
 
-verified: False   traps: [1, 8]   order matters: False
+verified: True   traps: [1, 8]   order matters: False
 
 ```sql
 WITH scores AS (
@@ -534,7 +536,7 @@ GROUP BY op.payment_type
 ORDER BY op.payment_type
 ```
 
-5 row(s), 1.29s. First 5:
+5 row(s), 1.41s. First 5:
 
 | payment_type | avg_review_score |
 |---|---|
@@ -546,7 +548,7 @@ ORDER BY op.payment_type
 
 ## q28 (hard): Among product categories with at least 500 delivered items, which 5 have the highest percentage of items sent by a seller in a different state than the customer?
 
-verified: False   traps: [4, 6]   order matters: True
+verified: True   traps: [4, 6]   order matters: True
 
 ```sql
 WITH items AS (
@@ -569,7 +571,7 @@ ORDER BY pct_cross_state DESC
 LIMIT 5
 ```
 
-5 row(s), 3.82s. First 5:
+5 row(s), 3.76s. First 5:
 
 | category | pct_cross_state | items |
 |---|---|---|
@@ -581,7 +583,7 @@ LIMIT 5
 
 ## q29 (hard): How many customers have spent more in product revenue than the average customer?
 
-verified: False   traps: [2, 3, 4]   order matters: False
+verified: True   traps: [2, 3, 4]   order matters: False
 
 ```sql
 WITH spend AS (
@@ -597,7 +599,7 @@ FROM spend
 WHERE total > (SELECT AVG(total) FROM spend)
 ```
 
-1 row(s), 2.36s. First 1:
+1 row(s), 2.46s. First 1:
 
 | above_average_customers |
 |---|
@@ -605,7 +607,7 @@ WHERE total > (SELECT AVG(total) FROM spend)
 
 ## q30 (hard): How many sellers are in a zip code prefix that has no entry in the geolocation table?
 
-verified: False   traps: [7]   order matters: False
+verified: True   traps: [7]   order matters: False
 
 ```sql
 SELECT COUNT(*) AS sellers_without_geolocation
@@ -623,7 +625,7 @@ WHERE g.zip IS NULL
 
 ## Checks
 
-- questions: 30, verified: 20, gold SQL that failed to run: 0
+- questions: 30, verified: 30, gold SQL that failed to run: 0
 - difficulty split: {'easy': 10, 'medium': 12, 'hard': 8} (expected {'easy': 10, 'medium': 12, 'hard': 8}) -> OK
 - questions that test at least one data trap: 24 (need 8 or more) -> OK
 - trap numbers covered: [1, 2, 3, 4, 5, 6, 7, 8]
