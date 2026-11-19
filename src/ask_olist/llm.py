@@ -49,10 +49,23 @@ class SqlOutput:  # shape of the JSON we ask Gemini for (a plain dict-schema kee
     }
 
 
+def _cache_model_id() -> str:
+    # Thinking level changes the output, so it is part of the cache key (default None keeps old keys valid).
+    if config.LLM_THINKING_LEVEL is None:
+        return config.LLM_MODEL
+    return f"{config.LLM_MODEL}|thinking={config.LLM_THINKING_LEVEL}"
+
+
+def _thinking_config() -> types.ThinkingConfig | None:
+    if config.LLM_THINKING_LEVEL is None:
+        return None
+    return types.ThinkingConfig(thinking_level=types.ThinkingLevel(config.LLM_THINKING_LEVEL.upper()))
+
+
 def generate_sql_json(prompt: str, prompt_version: str) -> dict[str, Any]:
     """Ask for {sql, assumptions} as structured JSON. Returns the parsed dict."""
     model = config.LLM_MODEL
-    key = cache.make_key(model, prompt_version, prompt)
+    key = cache.make_key(_cache_model_id(), prompt_version, prompt)
     cached = cache.get("llm_json", key)
     if cached is not None:
         return cached
@@ -61,6 +74,7 @@ def generate_sql_json(prompt: str, prompt_version: str) -> dict[str, Any]:
         temperature=0,
         response_mime_type="application/json",
         response_schema=SqlOutput.schema,
+        thinking_config=_thinking_config(),
     )
     response = _call_with_backoff(
         lambda: _get_client().models.generate_content(model=model, contents=prompt, config=gen_config)
@@ -73,12 +87,12 @@ def generate_sql_json(prompt: str, prompt_version: str) -> dict[str, Any]:
 def generate_text(prompt: str, prompt_version: str) -> str:
     """Plain-text generation (used for the English answer)."""
     model = config.LLM_MODEL
-    key = cache.make_key(model, prompt_version, prompt)
+    key = cache.make_key(_cache_model_id(), prompt_version, prompt)
     cached = cache.get("llm_text", key)
     if cached is not None:
         return cached
 
-    gen_config = types.GenerateContentConfig(temperature=0)
+    gen_config = types.GenerateContentConfig(temperature=0, thinking_config=_thinking_config())
     response = _call_with_backoff(
         lambda: _get_client().models.generate_content(model=model, contents=prompt, config=gen_config)
     )

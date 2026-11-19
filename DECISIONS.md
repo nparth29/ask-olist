@@ -61,3 +61,15 @@ One entry per choice: what we chose, the main alternative, and why (written for 
 - **Chosen:** the guard parses the SQL with sqlglot and accepts exactly one statement that is a SELECT (a leading WITH is fine, and UNION of SELECTs is allowed). It rejects PRAGMA, ATTACH, DDL and DML anywhere in the tree. Then the query runs on a connection opened with `mode=ro` plus `PRAGMA query_only=ON`.
 - **Alternative:** a regex that blocks words like DROP, or trusting the prompt ("only write SELECT").
 - **Why:** an LLM must never be trusted to run DELETE. A regex is easy to fool, but a real parser sees the structure. The read-only connection is a second, independent lock: even if the guard had a bug, SQLite itself refuses to write. The row cap (1000) and 10 s timeout stop runaway queries.
+
+## D13. Thinking level: tested `low`, NOT adopted (default kept)
+- **Chosen:** keep the model's default thinking (`LLM_THINKING_LEVEL = None` in `config.py`). The option stays in `llm.py` and is part of the cache key, so it can be tested again.
+- **Alternative:** `thinking_level="low"`, hoping for faster answers.
+- **What we tested (20 Nov 2026):** the same 5 sample questions, default thinking vs `low`. Only 4 of 5 could run; the 5th hit the free-tier daily limit (see D14). The rule was "keep `low` only if all 5 answers match".
+- **Result:** Q1 and Q4 gave the same rows and the same numbers (Q1's answer was written as a numbered list). Q2 gave the same value (5,962,902.01), but with a different column name. **Q3 changed:** default thinking answered 2,997 repeat customers (all order statuses); `low` answered 2,801 because it added `order_status = 'delivered'`, which the question did not ask for. So `low` misapplied rule 4 (the delivered default is for sales and revenue questions).
+- **Speed:** no clear gain. Old (first run) vs new (estimated from cache file times): Q1 85.6 vs 157.4 s, Q2 118.6 vs 106.6 s, Q3 172.0 vs 97.3 s, Q4 90.3 vs 106.4 s. Both include waiting on 503/504 retries, so server load hides any real effect. The new times are estimates, not measured by the pipeline.
+- **Why:** accuracy matters more than a speed gain we could not see. One changed answer is enough to reject it.
+
+## D14. Free-tier daily limit
+- **What happened:** on 20 Nov 2026 Gemini returned `429 ... requests per day limit exceeded on Free Tier, limit: 20`. The message named `gemini-3.6-flash`, although `config.py` uses `gemini-3.5-flash`; we have not found out why.
+- **Impact:** every question costs 2 LLM calls (SQL, then answer), plus retries. About 20 calls a day is roughly 10 questions a day. The Phase 5 evaluation (30 questions x 2 configurations) will not fit in one day. This is open and needs Parth's decision.

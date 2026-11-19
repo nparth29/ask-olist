@@ -33,6 +33,9 @@ QUERY_TIMEOUT_S = 10
 ROWS_RETURNED = 20       # rows included in the pipeline result
 ROWS_FOR_ANSWER = 50     # rows shown to the LLM when it writes the answer
 
+# How much the model "thinks" before answering: None (model default), "low", "medium", ...
+LLM_THINKING_LEVEL: str | None = None
+
 # LLM call settings.
 LLM_TIMEOUT_MS = 90_000
 LLM_MAX_RETRIES = 5
