@@ -120,5 +120,9 @@ def ask(question: str, use_rag: bool = True) -> dict[str, Any]:
         "rows": rows,
         "attempts": attempt,
         "retrieved_example_ids": [ex.id for ex in retrieved],
+        # extra detail for the demo UI (not part of the API response)
+        "retrieved_examples": [
+            {"id": ex.id, "question": ex.question, "sql": ex.sql, "score": round(ex.score, 4)} for ex in retrieved
+        ],
         "latency_s": round(time.perf_counter() - started, 2),
     }

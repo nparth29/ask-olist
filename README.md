@@ -4,7 +4,7 @@ Parth Mishra · github.com/nparth29
 
 Ask a data question in plain English. Ask-Olist writes a **safe** SQL query on the Olist e-commerce database, runs it, and answers in plain English, showing the SQL it used.
 
-> **Status:** work in progress. The text-to-SQL pipeline, the safety guard, the self-correction loop, the RAG retrieval and the FastAPI endpoint are built and tested. The accuracy evaluation, Docker image and demo app are not done yet, so this README has **no accuracy numbers**. They will be added from `reports/` once the evaluation has run.
+> **Status:** work in progress. The text-to-SQL pipeline, the safety guard, the self-correction loop, the RAG retrieval, the FastAPI endpoint and the Streamlit demo are built and tested. The accuracy evaluation and the Docker image are not done yet, so this README has **no accuracy numbers**. They will be added from `reports/` once the evaluation has run.
 
 ## The problem
 
@@ -118,7 +118,15 @@ uvicorn api.main:app --port 8000
 
 `GET /health` checks that the database and the example index exist. `POST /ask` takes `{"question": "...", "use_rag": true}` and returns the answer, SQL, assumptions, the first 20 rows, attempts, retrieved example ids and latency. If the model is unavailable (for example the free-tier quota) it returns HTTP 503 with a message.
 
-**7. Run the tests** (no API key or network needed; the LLM is mocked)
+**7. Or open the demo app**
+
+```powershell
+streamlit run app\streamlit_app.py
+```
+
+It opens in your browser. Type a question (or click a sample), and it shows the answer, the assumptions, the SQL (in an expander), the result table, the retrieved examples with similarity scores, and the number of attempts. A sidebar switch turns RAG off for a zero-shot comparison.
+
+**8. Run the tests** (no API key or network needed; the LLM is mocked)
 
 ```powershell
 python -m pytest
@@ -134,6 +142,7 @@ schema/      schema.md: the tables, join keys and trap rules the model reads
 examples/    30 verified question -> SQL pairs used for retrieval
 src/ask_olist/   config, cache, llm, db, guard, retrieval, pipeline, CLI
 api/         FastAPI app: POST /ask, GET /health
+app/         Streamlit demo
 scripts/     build_db, build_index, check_traps, check_examples
 tests/       guard, read-only connection, retry loop (mocked), retrieval, cache
 reports/     generated evidence (db summary, data traps, example check)
@@ -149,7 +158,7 @@ DECISIONS.md every design choice, with the main alternative and why
 - **Small example set.** Retrieval draws on 30 examples, so unusual question types get less help.
 - **Free-tier limits.** The project uses the Gemini free tier, which has a small daily request limit and sometimes returns overload errors. Calls are cached and retried, but heavy use can still be blocked for hours. Free-tier prompts may be used by Google to improve its products; this dataset is public, so that is acceptable here.
 - **English questions only,** one question at a time (no chat memory), no charts, and one fixed historical dataset (2016-2018). Results are capped at 1,000 rows and queries at 10 seconds.
-- **Not built yet:** the evaluation, the Docker image and the Streamlit demo.
+- **Not built yet:** the evaluation and the Docker image.
 
 ## Data and licence
 
