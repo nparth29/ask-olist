@@ -1,0 +1,461 @@
+# 30 evaluation questions with gold SQL, drafted first. Parth checks every gold SQL and its result,
+# then sets `verified: true` himself. None of these may appear in examples/examples.yaml (no leakage).
+#
+# difficulty: 10 easy, 12 medium, 8 hard.  traps: data-trap numbers (as numbered in the README) the question tests.
+# order_matters: true for top-N questions (row order is compared); otherwise rows are compared as a sorted list.
+# Result comparison (Phase 5): numbers are rounded to 2 decimals on both sides, so gold uses ROUND(..., 2).
+
+# ------------------------------------------------------------------ easy (10)
+
+- id: q01
+  question: "How many orders were placed in 2017?"
+  difficulty: easy
+  traps: []
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(*) AS orders_2017
+    FROM orders
+    WHERE strftime('%Y', order_purchase_timestamp) = '2017'
+
+- id: q02
+  question: "How many sellers have at least one order item?"
+  difficulty: easy
+  traps: []
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(DISTINCT seller_id) AS sellers_with_items
+    FROM order_items
+
+- id: q03
+  question: "What is the highest price of a single order item?"
+  difficulty: easy
+  traps: []
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT MAX(price) AS max_item_price
+    FROM order_items
+
+- id: q04
+  question: "How many orders were canceled?"
+  difficulty: easy
+  traps: [4]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(*) AS canceled_orders
+    FROM orders
+    WHERE order_status = 'canceled'
+
+- id: q05
+  question: "What is the average freight value per order item?"
+  difficulty: easy
+  traps: []
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT ROUND(AVG(freight_value), 2) AS avg_freight_per_item
+    FROM order_items
+
+- id: q06
+  question: "How many payments were made with a voucher?"
+  difficulty: easy
+  traps: []
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(*) AS voucher_payments
+    FROM order_payments
+    WHERE payment_type = 'voucher'
+
+- id: q07
+  question: "How many unique customers are there?"
+  difficulty: easy
+  traps: [2]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(DISTINCT customer_unique_id) AS unique_customers
+    FROM customers
+
+- id: q08
+  question: "What is the total freight value charged on delivered orders?"
+  difficulty: easy
+  traps: [3, 4]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT ROUND(SUM(oi.freight_value), 2) AS total_freight
+    FROM orders o
+    JOIN order_items oi ON oi.order_id = o.order_id
+    WHERE o.order_status = 'delivered'
+
+- id: q09
+  question: "How many reviews have a score of 1?"
+  difficulty: easy
+  traps: []
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(*) AS one_star_reviews
+    FROM order_reviews
+    WHERE review_score = 1
+
+- id: q10
+  question: "How many products have no product category?"
+  difficulty: easy
+  traps: [6]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(*) AS products_without_category
+    FROM products
+    WHERE product_category_name IS NULL
+
+# ------------------------------------------------------------------ medium (12)
+
+- id: q11
+  question: "How much was paid by credit card on delivered orders placed in 2018?"
+  difficulty: medium
+  traps: [3, 4]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT ROUND(SUM(op.payment_value), 2) AS credit_card_paid
+    FROM order_payments op
+    JOIN orders o ON o.order_id = op.order_id
+    WHERE o.order_status = 'delivered'
+      AND op.payment_type = 'credit_card'
+      AND strftime('%Y', o.order_purchase_timestamp) = '2018'
+
+- id: q12
+  question: "How many orders contain items from more than one seller?"
+  difficulty: medium
+  traps: [1]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(*) AS multi_seller_orders
+    FROM (
+      SELECT order_id
+      FROM order_items
+      GROUP BY order_id
+      HAVING COUNT(DISTINCT seller_id) > 1
+    )
+
+- id: q13
+  question: "Which payment type is used in the largest number of orders?"
+  difficulty: medium
+  traps: [1]
+  order_matters: true
+  verified: false
+  gold_sql: |
+    SELECT payment_type, COUNT(DISTINCT order_id) AS orders
+    FROM order_payments
+    GROUP BY payment_type
+    ORDER BY orders DESC
+    LIMIT 1
+
+- id: q14
+  question: "In delivered orders, how many customers have bought from more than one seller?"
+  difficulty: medium
+  traps: [2, 4]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(*) AS customers_with_multiple_sellers
+    FROM (
+      SELECT c.customer_unique_id
+      FROM orders o
+      JOIN customers c ON c.customer_id = o.customer_id
+      JOIN order_items oi ON oi.order_id = o.order_id
+      WHERE o.order_status = 'delivered'
+      GROUP BY c.customer_unique_id
+      HAVING COUNT(DISTINCT oi.seller_id) > 1
+    )
+
+- id: q15
+  question: "What is the average number of items per delivered order?"
+  difficulty: medium
+  traps: [1, 4]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT ROUND(1.0 * COUNT(*) / COUNT(DISTINCT oi.order_id), 2) AS avg_items_per_order
+    FROM order_items oi
+    JOIN orders o ON o.order_id = oi.order_id
+    WHERE o.order_status = 'delivered'
+
+- id: q16
+  question: "What percentage of orders contain more than one item?"
+  difficulty: medium
+  traps: [1]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT ROUND(100.0 * SUM(item_count > 1) / COUNT(*), 2) AS pct_multi_item_orders
+    FROM (
+      SELECT order_id, COUNT(*) AS item_count
+      FROM order_items
+      GROUP BY order_id
+    )
+
+- id: q17
+  question: "Which 5 sellers have the most delivered orders?"
+  difficulty: medium
+  traps: [4]
+  order_matters: true
+  verified: false
+  gold_sql: |
+    SELECT oi.seller_id, COUNT(DISTINCT oi.order_id) AS delivered_orders
+    FROM order_items oi
+    JOIN orders o ON o.order_id = oi.order_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY oi.seller_id
+    ORDER BY delivered_orders DESC
+    LIMIT 5
+
+- id: q18
+  question: "Which 5 seller states generate the most product revenue?"
+  difficulty: medium
+  traps: [3, 4]
+  order_matters: true
+  verified: false
+  gold_sql: |
+    SELECT s.seller_state, ROUND(SUM(oi.price), 2) AS product_revenue
+    FROM order_items oi
+    JOIN orders o ON o.order_id = oi.order_id
+    JOIN sellers s ON s.seller_id = oi.seller_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY s.seller_state
+    ORDER BY product_revenue DESC
+    LIMIT 5
+
+- id: q19
+  question: "In which month of 2017 were the most orders canceled?"
+  difficulty: medium
+  traps: [4]
+  order_matters: true
+  verified: false
+  gold_sql: |
+    SELECT strftime('%Y-%m', order_purchase_timestamp) AS month, COUNT(*) AS canceled_orders
+    FROM orders
+    WHERE order_status = 'canceled'
+      AND strftime('%Y', order_purchase_timestamp) = '2017'
+    GROUP BY month
+    ORDER BY canceled_orders DESC
+    LIMIT 1
+
+- id: q20
+  question: "What is the average item price in the health_beauty category?"
+  difficulty: medium
+  traps: [6]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT ROUND(AVG(oi.price), 2) AS avg_item_price
+    FROM order_items oi
+    JOIN products p ON p.product_id = oi.product_id
+    JOIN category_translation t ON t.product_category_name = p.product_category_name
+    WHERE t.product_category_name_english = 'health_beauty'
+
+- id: q21
+  question: "How many delivered orders placed in 2017 arrived on or before the estimated delivery date?"
+  difficulty: medium
+  traps: [4, 5]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(*) AS on_time_orders
+    FROM orders
+    WHERE order_status = 'delivered'
+      AND order_delivered_customer_date IS NOT NULL
+      AND order_estimated_delivery_date IS NOT NULL
+      AND order_delivered_customer_date <= order_estimated_delivery_date
+      AND strftime('%Y', order_purchase_timestamp) = '2017'
+
+- id: q22
+  question: "Which 5 customer states have the highest average order value in product revenue, among states with at least 100 delivered orders?"
+  difficulty: medium
+  traps: [1, 3, 4]
+  order_matters: true
+  verified: false
+  gold_sql: |
+    WITH order_totals AS (
+      SELECT o.order_id, o.customer_id, SUM(oi.price) AS order_total
+      FROM orders o
+      JOIN order_items oi ON oi.order_id = o.order_id
+      WHERE o.order_status = 'delivered'
+      GROUP BY o.order_id, o.customer_id
+    )
+    SELECT c.customer_state, ROUND(AVG(ot.order_total), 2) AS avg_order_value
+    FROM order_totals ot
+    JOIN customers c ON c.customer_id = ot.customer_id
+    GROUP BY c.customer_state
+    HAVING COUNT(*) >= 100
+    ORDER BY avg_order_value DESC
+    LIMIT 5
+
+# ------------------------------------------------------------------ hard (8)
+
+- id: q23
+  question: "For delivered orders placed in 2018, what is the average product revenue per order and the average amount paid per order?"
+  difficulty: hard
+  traps: [1, 3, 4]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    WITH items AS (
+      SELECT order_id, SUM(price) AS item_total FROM order_items GROUP BY order_id
+    ),
+    pays AS (
+      SELECT order_id, SUM(payment_value) AS pay_total FROM order_payments GROUP BY order_id
+    )
+    SELECT ROUND(AVG(items.item_total), 2) AS avg_product_revenue_per_order,
+           ROUND(AVG(pays.pay_total), 2) AS avg_paid_per_order
+    FROM orders o
+    JOIN items ON items.order_id = o.order_id
+    JOIN pays ON pays.order_id = o.order_id
+    WHERE o.order_status = 'delivered'
+      AND strftime('%Y', o.order_purchase_timestamp) = '2018'
+
+- id: q24
+  question: "What is the average review score of delivered orders that arrived later than the estimated delivery date?"
+  difficulty: hard
+  traps: [4, 5, 8]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    WITH scores AS (
+      SELECT order_id, AVG(review_score) AS score FROM order_reviews GROUP BY order_id
+    )
+    SELECT ROUND(AVG(s.score), 2) AS avg_review_score_late_orders
+    FROM orders o
+    JOIN scores s ON s.order_id = o.order_id
+    WHERE o.order_status = 'delivered'
+      AND o.order_delivered_customer_date IS NOT NULL
+      AND o.order_estimated_delivery_date IS NOT NULL
+      AND o.order_delivered_customer_date > o.order_estimated_delivery_date
+
+- id: q25
+  question: "How many customers placed their second order within 30 days of their first order?"
+  difficulty: hard
+  traps: [2]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    WITH customer_orders AS (
+      SELECT c.customer_unique_id, o.order_purchase_timestamp AS ts,
+             ROW_NUMBER() OVER (PARTITION BY c.customer_unique_id ORDER BY o.order_purchase_timestamp) AS rn
+      FROM orders o
+      JOIN customers c ON c.customer_id = o.customer_id
+    )
+    SELECT COUNT(*) AS customers
+    FROM customer_orders first_order
+    JOIN customer_orders second_order
+      ON second_order.customer_unique_id = first_order.customer_unique_id
+     AND first_order.rn = 1
+     AND second_order.rn = 2
+    WHERE julianday(second_order.ts) - julianday(first_order.ts) <= 30
+
+- id: q26
+  question: "Which 3 sellers have the highest percentage of late deliveries, among sellers with at least 50 delivered orders?"
+  difficulty: hard
+  traps: [4, 5]
+  order_matters: true
+  verified: false
+  gold_sql: |
+    WITH seller_orders AS (
+      SELECT DISTINCT oi.seller_id, o.order_id,
+             (o.order_delivered_customer_date > o.order_estimated_delivery_date) AS is_late
+      FROM order_items oi
+      JOIN orders o ON o.order_id = oi.order_id
+      WHERE o.order_status = 'delivered'
+        AND o.order_delivered_customer_date IS NOT NULL
+        AND o.order_estimated_delivery_date IS NOT NULL
+    )
+    SELECT seller_id, ROUND(100.0 * SUM(is_late) / COUNT(*), 2) AS pct_late, COUNT(*) AS delivered_orders
+    FROM seller_orders
+    GROUP BY seller_id
+    HAVING COUNT(*) >= 50
+    ORDER BY pct_late DESC
+    LIMIT 3
+
+- id: q27
+  question: "What is the average review score for each payment type?"
+  difficulty: hard
+  traps: [1, 8]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    WITH scores AS (
+      SELECT order_id, AVG(review_score) AS score FROM order_reviews GROUP BY order_id
+    ),
+    order_pay AS (
+      SELECT DISTINCT order_id, payment_type FROM order_payments
+    )
+    SELECT op.payment_type, ROUND(AVG(s.score), 2) AS avg_review_score
+    FROM order_pay op
+    JOIN scores s ON s.order_id = op.order_id
+    GROUP BY op.payment_type
+    ORDER BY op.payment_type
+
+- id: q28
+  question: "Among product categories with at least 500 delivered items, which 5 have the highest percentage of items sent by a seller in a different state than the customer?"
+  difficulty: hard
+  traps: [4, 6]
+  order_matters: true
+  verified: false
+  gold_sql: |
+    WITH items AS (
+      SELECT COALESCE(t.product_category_name_english, p.product_category_name) AS category,
+             (s.seller_state <> c.customer_state) AS cross_state
+      FROM order_items oi
+      JOIN orders o ON o.order_id = oi.order_id
+      JOIN customers c ON c.customer_id = o.customer_id
+      JOIN sellers s ON s.seller_id = oi.seller_id
+      JOIN products p ON p.product_id = oi.product_id
+      LEFT JOIN category_translation t ON t.product_category_name = p.product_category_name
+      WHERE o.order_status = 'delivered'
+        AND p.product_category_name IS NOT NULL
+    )
+    SELECT category, ROUND(100.0 * SUM(cross_state) / COUNT(*), 2) AS pct_cross_state, COUNT(*) AS items
+    FROM items
+    GROUP BY category
+    HAVING COUNT(*) >= 500
+    ORDER BY pct_cross_state DESC
+    LIMIT 5
+
+- id: q29
+  question: "How many customers have spent more in product revenue than the average customer?"
+  difficulty: hard
+  traps: [2, 3, 4]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    WITH spend AS (
+      SELECT c.customer_unique_id, SUM(oi.price) AS total
+      FROM orders o
+      JOIN customers c ON c.customer_id = o.customer_id
+      JOIN order_items oi ON oi.order_id = o.order_id
+      WHERE o.order_status = 'delivered'
+      GROUP BY c.customer_unique_id
+    )
+    SELECT COUNT(*) AS above_average_customers
+    FROM spend
+    WHERE total > (SELECT AVG(total) FROM spend)
+
+- id: q30
+  question: "How many sellers are in a zip code prefix that has no entry in the geolocation table?"
+  difficulty: hard
+  traps: [7]
+  order_matters: false
+  verified: false
+  gold_sql: |
+    SELECT COUNT(*) AS sellers_without_geolocation
+    FROM sellers s
+    LEFT JOIN (SELECT DISTINCT geolocation_zip_code_prefix AS zip FROM geolocation) g
+      ON g.zip = s.seller_zip_code_prefix
+    WHERE g.zip IS NULL

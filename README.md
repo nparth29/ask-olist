@@ -132,7 +132,7 @@ It opens in your browser. Type a question (or click a sample), and it shows the 
 python -m pytest
 ```
 
-Other scripts: `python -m ask_olist.smoke` checks the key and lists the available Flash models; `python scripts\check_traps.py` regenerates the trap evidence; `python scripts\check_examples.py` runs every example query locally.
+Other scripts: `python -m ask_olist.smoke` checks the key and lists the available Flash models; `python scripts\check_traps.py` regenerates the trap evidence; `python scripts\check_examples.py` runs every example query locally; `python scripts\check_gold.py` runs the gold SQL of the evaluation questions locally.
 
 ## Project layout
 
@@ -140,6 +140,7 @@ Other scripts: `python -m ask_olist.smoke` checks the key and lists the availabl
 prompts/     versioned prompts: sql_v1 (zero-shot), sql_v2 (RAG), fix_v1 (retry), answer_v1
 schema/      schema.md: the tables, join keys and trap rules the model reads
 examples/    30 verified question -> SQL pairs used for retrieval
+eval/        30 evaluation questions with gold SQL (separate from the examples; being verified)
 src/ask_olist/   config, cache, llm, db, guard, retrieval, pipeline, CLI
 api/         FastAPI app: POST /ask, GET /health
 app/         Streamlit demo
@@ -148,6 +149,15 @@ tests/       guard, read-only connection, retry loop (mocked), retrieval, cache
 reports/     generated evidence (db summary, data traps, example check)
 DECISIONS.md every design choice, with the main alternative and why
 ```
+
+## What didn't work
+
+These are real problems from building it. Each one is logged in `DECISIONS.md` with the details.
+
+1. **The newest Flash models were unusable.** On the day I picked the model, the three newest Gemini Flash models (3.6, 3.7 and 3.8) timed out or returned "503: high demand". I used `gemini-3.5-flash` instead, which worked but was slow. The retry code now also retries 503 and 504 errors (not only 429), because they are just as temporary. The model name lives only in `config.py`, so switching later is a one-line change. (D1, D11)
+2. **A lower "thinking" level looked faster but changed an answer, so I rejected it.** I tested `thinking_level=low` on the same sample questions. It gave no clear speed gain, because server load hid any effect, and it changed the answer to the repeat-customer question by adding a `delivered` filter the question never asked for. That misapplies the rule that the delivered default is for sales questions. I kept the model's default thinking. (D13)
+3. **A simple query hit the 10-second limit.** "Top 10 sellers by product revenue" timed out. The database had no table statistics, so SQLite picked a slow join plan and built a temporary index for every item row instead of using the existing `order_id` index. Running `ANALYZE` once when the database is built fixed it, and it happens at build time because the app never writes. (D17)
+4. **Retrying a daily quota error is pointless.** The first retry loop backed off for about a minute on the free tier's daily-limit error, which can never succeed. It now fails immediately when Google says to wait for hours. (D14, D16)
 
 ## Limitations
 
