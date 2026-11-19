@@ -170,7 +170,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2018'
 ```
 
-1 row(s), 0.90s. First 1:
+1 row(s), 0.91s. First 1:
 
 | credit_card_paid |
 |---|
@@ -231,7 +231,7 @@ FROM (
 )
 ```
 
-1 row(s), 2.34s. First 1:
+1 row(s), 2.36s. First 1:
 
 | customers_with_multiple_sellers |
 |---|
@@ -254,9 +254,9 @@ WHERE o.order_status = 'delivered'
 |---|
 | 1.14 |
 
-## q16 (medium): What percentage of orders contain more than one item?
+## q16 (medium): Among orders that have at least one item, what percentage contain more than one item?
 
-verified: False   traps: [1]   order matters: False
+verified: True   traps: [1]   order matters: False
 
 ```sql
 SELECT ROUND(100.0 * SUM(item_count > 1) / COUNT(*), 2) AS pct_multi_item_orders
@@ -275,7 +275,7 @@ FROM (
 
 ## q17 (medium): Which 5 sellers have the most delivered orders?
 
-verified: False   traps: [4]   order matters: True
+verified: True   traps: [4]   order matters: True
 
 ```sql
 SELECT oi.seller_id, COUNT(DISTINCT oi.order_id) AS delivered_orders
@@ -299,7 +299,7 @@ LIMIT 5
 
 ## q18 (medium): Which 5 seller states generate the most product revenue?
 
-verified: False   traps: [3, 4]   order matters: True
+verified: True   traps: [3, 4]   order matters: True
 
 ```sql
 SELECT s.seller_state, ROUND(SUM(oi.price), 2) AS product_revenue
@@ -312,7 +312,7 @@ ORDER BY product_revenue DESC
 LIMIT 5
 ```
 
-5 row(s), 1.24s. First 5:
+5 row(s), 1.25s. First 5:
 
 | seller_state | product_revenue |
 |---|---|
@@ -324,7 +324,7 @@ LIMIT 5
 
 ## q19 (medium): In which month of 2017 were the most orders canceled?
 
-verified: False   traps: [4]   order matters: True
+verified: True   traps: [4]   order matters: True
 
 ```sql
 SELECT strftime('%Y-%m', order_purchase_timestamp) AS month, COUNT(*) AS canceled_orders
@@ -344,7 +344,7 @@ LIMIT 1
 
 ## q20 (medium): What is the average item price in the health_beauty category?
 
-verified: False   traps: [6]   order matters: False
+verified: True   traps: [6]   order matters: False
 
 ```sql
 SELECT ROUND(AVG(oi.price), 2) AS avg_item_price
@@ -401,7 +401,7 @@ ORDER BY avg_order_value DESC
 LIMIT 5
 ```
 
-5 row(s), 1.80s. First 5:
+5 row(s), 1.78s. First 5:
 
 | customer_state | avg_order_value |
 |---|---|
@@ -431,7 +431,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2018'
 ```
 
-1 row(s), 1.35s. First 1:
+1 row(s), 1.36s. First 1:
 
 | avg_product_revenue_per_order | avg_paid_per_order |
 |---|---|
@@ -454,7 +454,7 @@ WHERE o.order_status = 'delivered'
   AND o.order_delivered_customer_date > o.order_estimated_delivery_date
 ```
 
-1 row(s), 1.27s. First 1:
+1 row(s), 1.30s. First 1:
 
 | avg_review_score_late_orders |
 |---|
@@ -480,7 +480,7 @@ JOIN customer_orders second_order
 WHERE julianday(second_order.ts) - julianday(first_order.ts) <= 30
 ```
 
-1 row(s), 2.03s. First 1:
+1 row(s), 2.01s. First 1:
 
 | customers |
 |---|
@@ -534,7 +534,7 @@ GROUP BY op.payment_type
 ORDER BY op.payment_type
 ```
 
-5 row(s), 1.32s. First 5:
+5 row(s), 1.29s. First 5:
 
 | payment_type | avg_review_score |
 |---|---|
@@ -569,7 +569,7 @@ ORDER BY pct_cross_state DESC
 LIMIT 5
 ```
 
-5 row(s), 3.93s. First 5:
+5 row(s), 3.82s. First 5:
 
 | category | pct_cross_state | items |
 |---|---|---|
@@ -615,7 +615,7 @@ LEFT JOIN (SELECT DISTINCT geolocation_zip_code_prefix AS zip FROM geolocation) 
 WHERE g.zip IS NULL
 ```
 
-1 row(s), 0.32s. First 1:
+1 row(s), 0.31s. First 1:
 
 | sellers_without_geolocation |
 |---|
@@ -623,7 +623,7 @@ WHERE g.zip IS NULL
 
 ## Checks
 
-- questions: 30, verified: 15, gold SQL that failed to run: 0
+- questions: 30, verified: 20, gold SQL that failed to run: 0
 - difficulty split: {'easy': 10, 'medium': 12, 'hard': 8} (expected {'easy': 10, 'medium': 12, 'hard': 8}) -> OK
 - questions that test at least one data trap: 24 (need 8 or more) -> OK
 - trap numbers covered: [1, 2, 3, 4, 5, 6, 7, 8]

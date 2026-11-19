@@ -189,11 +189,11 @@
     WHERE o.order_status = 'delivered'
 
 - id: q16
-  question: "What percentage of orders contain more than one item?"
+  question: "Among orders that have at least one item, what percentage contain more than one item?"
   difficulty: medium
   traps: [1]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT ROUND(100.0 * SUM(item_count > 1) / COUNT(*), 2) AS pct_multi_item_orders
     FROM (
@@ -207,7 +207,7 @@
   difficulty: medium
   traps: [4]
   order_matters: true
-  verified: false
+  verified: true
   gold_sql: |
     SELECT oi.seller_id, COUNT(DISTINCT oi.order_id) AS delivered_orders
     FROM order_items oi
@@ -222,7 +222,7 @@
   difficulty: medium
   traps: [3, 4]
   order_matters: true
-  verified: false
+  verified: true
   gold_sql: |
     SELECT s.seller_state, ROUND(SUM(oi.price), 2) AS product_revenue
     FROM order_items oi
@@ -238,7 +238,7 @@
   difficulty: medium
   traps: [4]
   order_matters: true
-  verified: false
+  verified: true
   gold_sql: |
     SELECT strftime('%Y-%m', order_purchase_timestamp) AS month, COUNT(*) AS canceled_orders
     FROM orders
@@ -253,7 +253,7 @@
   difficulty: medium
   traps: [6]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT ROUND(AVG(oi.price), 2) AS avg_item_price
     FROM order_items oi
