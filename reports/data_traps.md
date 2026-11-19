@@ -66,6 +66,22 @@ WHERE o.order_status = 'delivered'
 |---|---|
 | 13221363.14 | 15422461.77 |
 
+**Why the two 'RIGHT' totals differ: delivered orders that have items but no payment row (the inner join to payments drops them)**
+
+```sql
+SELECT COUNT(*) AS delivered_orders_without_payment,
+       ROUND(SUM(it.item_total), 2) AS their_product_revenue
+FROM orders o
+JOIN (SELECT order_id, SUM(price) AS item_total FROM order_items GROUP BY order_id) it
+  ON it.order_id = o.order_id
+WHERE o.order_status = 'delivered'
+  AND NOT EXISTS (SELECT 1 FROM order_payments p WHERE p.order_id = o.order_id)
+```
+
+| delivered_orders_without_payment | their_product_revenue |
+|---|---|
+| 1 | 134.97 |
+
 ## 2. customer_id vs customer_unique_id
 
 `customer_id` is new for every order; the real person is `customer_unique_id`.
@@ -163,7 +179,23 @@ GROUP BY o.order_status ORDER BY sum_price DESC
 
 ## 5. Late delivery
 
-Late = `order_delivered_customer_date > order_estimated_delivery_date`, both not null.
+Late = `order_delivered_customer_date > order_estimated_delivery_date`, both not null. **Rule: late-delivery questions also filter `order_status = 'delivered'`**, because some canceled orders carry a delivered date (see the first table below).
+
+**Late orders by status: without the status filter, non-delivered orders can be counted as late**
+
+```sql
+SELECT order_status, COUNT(*) AS late_orders
+FROM orders
+WHERE order_delivered_customer_date IS NOT NULL
+  AND order_estimated_delivery_date IS NOT NULL
+  AND order_delivered_customer_date > order_estimated_delivery_date
+GROUP BY order_status ORDER BY late_orders DESC
+```
+
+| order_status | late_orders |
+|---|---|
+| delivered | 7,826 |
+| canceled | 1 |
 
 **Delivered date is NULL for which statuses?**
 
@@ -277,7 +309,7 @@ SELECT (SELECT COUNT(*) FROM customers) AS customers_rows,
 
 ## 8. order_reviews: more than one review per order
 
-Some orders have several reviews; averaging raw review rows over-weights them.
+Some orders have several reviews; averaging raw review rows over-weights them. **Rule: average per order first.** The overall average barely moves, but the rule matters most for per-seller and per-category averages (see the last table).
 
 **Orders with more than one review; duplicated review_id values**
 
@@ -304,3 +336,24 @@ SELECT
 | avg_over_review_rows | avg_per_order |
 |---|---|
 | 4.0864 | 4.0868 |
+
+**Per-seller average score: raw review rows vs per-order-first (sellers with at least 1 review)**
+
+```sql
+WITH seller_orders AS (SELECT DISTINCT order_id, seller_id FROM order_items),
+     per_order AS (SELECT order_id, AVG(review_score) AS s FROM order_reviews GROUP BY order_id),
+     raw AS (SELECT so.seller_id, AVG(r.review_score) AS avg_raw
+             FROM seller_orders so JOIN order_reviews r ON r.order_id = so.order_id
+             GROUP BY so.seller_id),
+     fixed AS (SELECT so.seller_id, AVG(po.s) AS avg_fixed
+               FROM seller_orders so JOIN per_order po ON po.order_id = so.order_id
+               GROUP BY so.seller_id)
+SELECT COUNT(*) AS sellers,
+       SUM(ABS(raw.avg_raw - fixed.avg_fixed) > 0.0001) AS sellers_where_avg_differs,
+       ROUND(MAX(ABS(raw.avg_raw - fixed.avg_fixed)), 4) AS max_difference
+FROM raw JOIN fixed ON fixed.seller_id = raw.seller_id
+```
+
+| sellers | sellers_where_avg_differs | max_difference |
+|---|---|---|
+| 3,090 | 234 | 0.4167 |

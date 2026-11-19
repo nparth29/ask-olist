@@ -63,6 +63,19 @@ TRAPS = [
                 WHERE o.order_status = 'delivered'
                 """,
             ),
+            (
+                "Why the two 'RIGHT' totals differ: delivered orders that have items but no payment row "
+                "(the inner join to payments drops them)",
+                """
+                SELECT COUNT(*) AS delivered_orders_without_payment,
+                       ROUND(SUM(it.item_total), 2) AS their_product_revenue
+                FROM orders o
+                JOIN (SELECT order_id, SUM(price) AS item_total FROM order_items GROUP BY order_id) it
+                  ON it.order_id = o.order_id
+                WHERE o.order_status = 'delivered'
+                  AND NOT EXISTS (SELECT 1 FROM order_payments p WHERE p.order_id = o.order_id)
+                """,
+            ),
         ],
     ),
     (
@@ -136,8 +149,21 @@ TRAPS = [
     ),
     (
         "5. Late delivery",
-        "Late = `order_delivered_customer_date > order_estimated_delivery_date`, both not null.",
+        "Late = `order_delivered_customer_date > order_estimated_delivery_date`, both not null. "
+        "**Rule: late-delivery questions also filter `order_status = 'delivered'`**, because some canceled "
+        "orders carry a delivered date (see the first table below).",
         [
+            (
+                "Late orders by status: without the status filter, non-delivered orders can be counted as late",
+                """
+                SELECT order_status, COUNT(*) AS late_orders
+                FROM orders
+                WHERE order_delivered_customer_date IS NOT NULL
+                  AND order_estimated_delivery_date IS NOT NULL
+                  AND order_delivered_customer_date > order_estimated_delivery_date
+                GROUP BY order_status ORDER BY late_orders DESC
+                """,
+            ),
             (
                 "Delivered date is NULL for which statuses?",
                 """
@@ -216,7 +242,9 @@ TRAPS = [
     ),
     (
         "8. order_reviews: more than one review per order",
-        "Some orders have several reviews; averaging raw review rows over-weights them.",
+        "Some orders have several reviews; averaging raw review rows over-weights them. "
+        "**Rule: average per order first.** The overall average barely moves, but the rule matters most for "
+        "per-seller and per-category averages (see the last table).",
         [
             (
                 "Orders with more than one review; duplicated review_id values",
@@ -234,6 +262,23 @@ TRAPS = [
                 SELECT
                   (SELECT ROUND(AVG(review_score), 4) FROM order_reviews) AS avg_over_review_rows,
                   (SELECT ROUND(AVG(s), 4) FROM (SELECT AVG(review_score) AS s FROM order_reviews GROUP BY order_id)) AS avg_per_order
+                """,
+            ),
+            (
+                "Per-seller average score: raw review rows vs per-order-first (sellers with at least 1 review)",
+                """
+                WITH seller_orders AS (SELECT DISTINCT order_id, seller_id FROM order_items),
+                     per_order AS (SELECT order_id, AVG(review_score) AS s FROM order_reviews GROUP BY order_id),
+                     raw AS (SELECT so.seller_id, AVG(r.review_score) AS avg_raw
+                             FROM seller_orders so JOIN order_reviews r ON r.order_id = so.order_id
+                             GROUP BY so.seller_id),
+                     fixed AS (SELECT so.seller_id, AVG(po.s) AS avg_fixed
+                               FROM seller_orders so JOIN per_order po ON po.order_id = so.order_id
+                               GROUP BY so.seller_id)
+                SELECT COUNT(*) AS sellers,
+                       SUM(ABS(raw.avg_raw - fixed.avg_fixed) > 0.0001) AS sellers_where_avg_differs,
+                       ROUND(MAX(ABS(raw.avg_raw - fixed.avg_fixed)), 4) AS max_difference
+                FROM raw JOIN fixed ON fixed.seller_id = raw.seller_id
                 """,
             ),
         ],
