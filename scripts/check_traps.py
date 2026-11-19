@@ -76,6 +76,22 @@ TRAPS = [
                   AND NOT EXISTS (SELECT 1 FROM order_payments p WHERE p.order_id = o.order_id)
                 """,
             ),
+            (
+                "Same order, freight side: does it explain the gap between total freight on delivered orders "
+                "(items only) and price-plus-freight minus price (which needs a payment row)?",
+                """
+                WITH items AS (SELECT order_id, SUM(price) AS price_sum, SUM(freight_value) AS freight_sum
+                               FROM order_items GROUP BY order_id),
+                     delivered AS (SELECT o.order_id,
+                                          EXISTS (SELECT 1 FROM order_payments p WHERE p.order_id = o.order_id) AS has_payment
+                                   FROM orders o WHERE o.order_status = 'delivered')
+                SELECT ROUND(SUM(items.freight_sum), 2) AS freight_all_delivered_orders,
+                       ROUND(SUM(CASE WHEN d.has_payment THEN items.freight_sum END), 2) AS freight_with_payment_row,
+                       ROUND(SUM(CASE WHEN NOT d.has_payment THEN items.freight_sum END), 2) AS freight_of_order_without_payment,
+                       ROUND(SUM(items.freight_sum) - SUM(CASE WHEN d.has_payment THEN items.freight_sum END), 2) AS gap
+                FROM delivered d JOIN items ON items.order_id = d.order_id
+                """,
+            ),
         ],
     ),
     (

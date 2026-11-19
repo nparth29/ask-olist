@@ -64,7 +64,7 @@
   difficulty: easy
   traps: []
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(*) AS voucher_payments
     FROM order_payments
@@ -75,7 +75,7 @@
   difficulty: easy
   traps: [2]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(DISTINCT customer_unique_id) AS unique_customers
     FROM customers
@@ -85,7 +85,7 @@
   difficulty: easy
   traps: [3, 4]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT ROUND(SUM(oi.freight_value), 2) AS total_freight
     FROM orders o
@@ -97,7 +97,7 @@
   difficulty: easy
   traps: []
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(*) AS one_star_reviews
     FROM order_reviews
@@ -108,7 +108,7 @@
   difficulty: easy
   traps: [6]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(*) AS products_without_category
     FROM products

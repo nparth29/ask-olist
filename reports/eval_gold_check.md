@@ -2,7 +2,7 @@
 
 ## q01 (easy): How many orders were placed in 2017?
 
-verified: False   traps: []   order matters: False
+verified: True   traps: []   order matters: False
 
 ```sql
 SELECT COUNT(*) AS orders_2017
@@ -10,7 +10,7 @@ FROM orders
 WHERE strftime('%Y', order_purchase_timestamp) = '2017'
 ```
 
-1 row(s), 0.13s. First 1:
+1 row(s), 0.07s. First 1:
 
 | orders_2017 |
 |---|
@@ -18,14 +18,14 @@ WHERE strftime('%Y', order_purchase_timestamp) = '2017'
 
 ## q02 (easy): How many sellers have at least one order item?
 
-verified: False   traps: []   order matters: False
+verified: True   traps: []   order matters: False
 
 ```sql
 SELECT COUNT(DISTINCT seller_id) AS sellers_with_items
 FROM order_items
 ```
 
-1 row(s), 0.04s. First 1:
+1 row(s), 0.01s. First 1:
 
 | sellers_with_items |
 |---|
@@ -33,14 +33,14 @@ FROM order_items
 
 ## q03 (easy): What is the highest price of a single order item?
 
-verified: False   traps: []   order matters: False
+verified: True   traps: []   order matters: False
 
 ```sql
 SELECT MAX(price) AS max_item_price
 FROM order_items
 ```
 
-1 row(s), 0.09s. First 1:
+1 row(s), 0.03s. First 1:
 
 | max_item_price |
 |---|
@@ -48,7 +48,7 @@ FROM order_items
 
 ## q04 (easy): How many orders were canceled?
 
-verified: False   traps: [4]   order matters: False
+verified: True   traps: [4]   order matters: False
 
 ```sql
 SELECT COUNT(*) AS canceled_orders
@@ -64,7 +64,7 @@ WHERE order_status = 'canceled'
 
 ## q05 (easy): What is the average freight value per order item?
 
-verified: False   traps: []   order matters: False
+verified: True   traps: []   order matters: False
 
 ```sql
 SELECT ROUND(AVG(freight_value), 2) AS avg_freight_per_item
@@ -79,7 +79,7 @@ FROM order_items
 
 ## q06 (easy): How many payments were made with a voucher?
 
-verified: False   traps: []   order matters: False
+verified: True   traps: []   order matters: False
 
 ```sql
 SELECT COUNT(*) AS voucher_payments
@@ -87,7 +87,7 @@ FROM order_payments
 WHERE payment_type = 'voucher'
 ```
 
-1 row(s), 0.04s. First 1:
+1 row(s), 0.01s. First 1:
 
 | voucher_payments |
 |---|
@@ -95,14 +95,14 @@ WHERE payment_type = 'voucher'
 
 ## q07 (easy): How many unique customers are there?
 
-verified: False   traps: [2]   order matters: False
+verified: True   traps: [2]   order matters: False
 
 ```sql
 SELECT COUNT(DISTINCT customer_unique_id) AS unique_customers
 FROM customers
 ```
 
-1 row(s), 0.03s. First 1:
+1 row(s), 0.01s. First 1:
 
 | unique_customers |
 |---|
@@ -110,7 +110,7 @@ FROM customers
 
 ## q08 (easy): What is the total freight value charged on delivered orders?
 
-verified: False   traps: [3, 4]   order matters: False
+verified: True   traps: [3, 4]   order matters: False
 
 ```sql
 SELECT ROUND(SUM(oi.freight_value), 2) AS total_freight
@@ -119,7 +119,7 @@ JOIN order_items oi ON oi.order_id = o.order_id
 WHERE o.order_status = 'delivered'
 ```
 
-1 row(s), 1.62s. First 1:
+1 row(s), 1.08s. First 1:
 
 | total_freight |
 |---|
@@ -127,7 +127,7 @@ WHERE o.order_status = 'delivered'
 
 ## q09 (easy): How many reviews have a score of 1?
 
-verified: False   traps: []   order matters: False
+verified: True   traps: []   order matters: False
 
 ```sql
 SELECT COUNT(*) AS one_star_reviews
@@ -135,7 +135,7 @@ FROM order_reviews
 WHERE review_score = 1
 ```
 
-1 row(s), 0.13s. First 1:
+1 row(s), 0.02s. First 1:
 
 | one_star_reviews |
 |---|
@@ -143,7 +143,7 @@ WHERE review_score = 1
 
 ## q10 (easy): How many products have no product category?
 
-verified: False   traps: [6]   order matters: False
+verified: True   traps: [6]   order matters: False
 
 ```sql
 SELECT COUNT(*) AS products_without_category
@@ -151,7 +151,7 @@ FROM products
 WHERE product_category_name IS NULL
 ```
 
-1 row(s), 0.03s. First 1:
+1 row(s), 0.01s. First 1:
 
 | products_without_category |
 |---|
@@ -170,7 +170,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2018'
 ```
 
-1 row(s), 1.41s. First 1:
+1 row(s), 0.90s. First 1:
 
 | credit_card_paid |
 |---|
@@ -208,7 +208,7 @@ ORDER BY orders DESC
 LIMIT 1
 ```
 
-1 row(s), 0.27s. First 1:
+1 row(s), 0.26s. First 1:
 
 | payment_type | orders |
 |---|---|
@@ -231,7 +231,7 @@ FROM (
 )
 ```
 
-1 row(s), 4.03s. First 1:
+1 row(s), 2.40s. First 1:
 
 | customers_with_multiple_sellers |
 |---|
@@ -248,7 +248,7 @@ JOIN orders o ON o.order_id = oi.order_id
 WHERE o.order_status = 'delivered'
 ```
 
-1 row(s), 0.77s. First 1:
+1 row(s), 0.76s. First 1:
 
 | avg_items_per_order |
 |---|
@@ -287,7 +287,7 @@ ORDER BY delivered_orders DESC
 LIMIT 5
 ```
 
-5 row(s), 1.68s. First 5:
+5 row(s), 1.66s. First 5:
 
 | seller_id | delivered_orders |
 |---|---|
@@ -312,7 +312,7 @@ ORDER BY product_revenue DESC
 LIMIT 5
 ```
 
-5 row(s), 1.31s. First 5:
+5 row(s), 1.28s. First 5:
 
 | seller_state | product_revenue |
 |---|---|
@@ -354,7 +354,7 @@ JOIN category_translation t ON t.product_category_name = p.product_category_name
 WHERE t.product_category_name_english = 'health_beauty'
 ```
 
-1 row(s), 0.65s. First 1:
+1 row(s), 0.23s. First 1:
 
 | avg_item_price |
 |---|
@@ -401,7 +401,7 @@ ORDER BY avg_order_value DESC
 LIMIT 5
 ```
 
-5 row(s), 1.79s. First 5:
+5 row(s), 1.85s. First 5:
 
 | customer_state | avg_order_value |
 |---|---|
@@ -431,7 +431,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2018'
 ```
 
-1 row(s), 1.49s. First 1:
+1 row(s), 1.39s. First 1:
 
 | avg_product_revenue_per_order | avg_paid_per_order |
 |---|---|
@@ -454,7 +454,7 @@ WHERE o.order_status = 'delivered'
   AND o.order_delivered_customer_date > o.order_estimated_delivery_date
 ```
 
-1 row(s), 1.45s. First 1:
+1 row(s), 1.30s. First 1:
 
 | avg_review_score_late_orders |
 |---|
@@ -480,7 +480,7 @@ JOIN customer_orders second_order
 WHERE julianday(second_order.ts) - julianday(first_order.ts) <= 30
 ```
 
-1 row(s), 2.54s. First 1:
+1 row(s), 2.03s. First 1:
 
 | customers |
 |---|
@@ -508,7 +508,7 @@ ORDER BY pct_late DESC
 LIMIT 3
 ```
 
-3 row(s), 2.10s. First 3:
+3 row(s), 2.15s. First 3:
 
 | seller_id | pct_late | delivered_orders |
 |---|---|---|
@@ -534,7 +534,7 @@ GROUP BY op.payment_type
 ORDER BY op.payment_type
 ```
 
-5 row(s), 1.30s. First 5:
+5 row(s), 1.35s. First 5:
 
 | payment_type | avg_review_score |
 |---|---|
@@ -569,7 +569,7 @@ ORDER BY pct_cross_state DESC
 LIMIT 5
 ```
 
-5 row(s), 4.03s. First 5:
+5 row(s), 3.80s. First 5:
 
 | category | pct_cross_state | items |
 |---|---|---|
@@ -597,7 +597,7 @@ FROM spend
 WHERE total > (SELECT AVG(total) FROM spend)
 ```
 
-1 row(s), 2.37s. First 1:
+1 row(s), 2.42s. First 1:
 
 | above_average_customers |
 |---|
@@ -615,7 +615,7 @@ LEFT JOIN (SELECT DISTINCT geolocation_zip_code_prefix AS zip FROM geolocation) 
 WHERE g.zip IS NULL
 ```
 
-1 row(s), 0.39s. First 1:
+1 row(s), 0.32s. First 1:
 
 | sellers_without_geolocation |
 |---|
@@ -623,7 +623,7 @@ WHERE g.zip IS NULL
 
 ## Checks
 
-- questions: 30, verified: 0, gold SQL that failed to run: 0
+- questions: 30, verified: 10, gold SQL that failed to run: 0
 - difficulty split: {'easy': 10, 'medium': 12, 'hard': 8} (expected {'easy': 10, 'medium': 12, 'hard': 8}) -> OK
 - questions that test at least one data trap: 24 (need 8 or more) -> OK
 - trap numbers covered: [1, 2, 3, 4, 5, 6, 7, 8]
