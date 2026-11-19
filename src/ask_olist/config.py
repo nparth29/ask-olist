@@ -18,3 +18,21 @@ RAW_DIR = DATA_DIR / "raw"
 DB_PATH = DATA_DIR / "olist.db"
 CACHE_DIR = ROOT / "cache"
 LOG_DIR = ROOT / "logs"
+RUN_LOG = LOG_DIR / "runs.jsonl"
+
+PROMPTS_DIR = ROOT / "prompts"
+SCHEMA_PATH = ROOT / "schema" / "schema.md"
+
+# Prompt versions: changing a prompt's wording means a NEW version file (and so a new cache key).
+SQL_PROMPT_VERSION = "sql_v1"
+ANSWER_PROMPT_VERSION = "answer_v1"
+
+# Query limits (rule: the app only ever reads).
+MAX_ROWS = 1000
+QUERY_TIMEOUT_S = 10
+ROWS_RETURNED = 20       # rows included in the pipeline result
+ROWS_FOR_ANSWER = 50     # rows shown to the LLM when it writes the answer
+
+# LLM call settings.
+LLM_TIMEOUT_MS = 90_000
+LLM_MAX_RETRIES = 5

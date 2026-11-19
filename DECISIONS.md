@@ -31,3 +31,33 @@ One entry per choice: what we chose, the main alternative, and why (written for 
 - **Chosen:** `scripts/check_traps.py` runs one SQL check per trap and writes `reports/data_traps.md`.
 - **Alternative:** run queries by hand and paste the numbers.
 - **Why:** rule 4 says no invented numbers. If a number is in the report, a query in this repo produced it, and we can re-run it.
+
+## D7. What text-to-SQL is, and why the schema goes in the prompt
+- **Chosen:** the whole `schema/schema.md` (tables, columns, join keys, trap rules) is pasted into every SQL prompt.
+- **Alternative:** let the model guess table names, or fine-tune it on our schema.
+- **Why:** an LLM has never seen our database. It only writes correct SQL if it can read the real table and column names, and our rules for the traps. Pasting the schema is cheap, needs no training, and is easy to change.
+
+## D8. No LangChain or LlamaIndex
+- **Chosen:** plain Python: one function per step (prompt, LLM call, guard, run, answer).
+- **Alternative:** LangChain or LlamaIndex.
+- **Why:** Parth must be able to explain every step in an interview. Frameworks hide the steps behind many layers, and the pipeline is small enough to write directly.
+
+## D9. Structured JSON output from Gemini
+- **Chosen:** Gemini must reply with JSON `{sql, assumptions}` (a response schema is passed to the API), with temperature 0.
+- **Alternative:** ask for free text and cut the SQL out of a markdown code block.
+- **Why:** parsing free text breaks when the model adds extra words. A schema gives us two clean fields, and `assumptions` lets the answer say which definition was used. Temperature 0 keeps answers as repeatable as possible.
+
+## D10. Disk cache for every LLM call
+- **Chosen:** each call is saved in `cache/` under sha256(model + prompt version + input).
+- **Alternative:** no cache, or an in-memory cache.
+- **Why:** a re-run makes zero API calls, which saves free-tier quota and time (a repeat question took 1.1 s instead of about 90 s) and makes evaluation numbers repeatable. The key includes the model and prompt version, so changing either never returns a stale answer.
+
+## D11. Retry on 429, 503 and 504 with exponential backoff
+- **Chosen:** wait 2 s, 4 s, 8 s ... (up to 5 retries) on 429 (rate limit), 503 (overloaded) and 504 (timeout).
+- **Alternative:** retry only on 429, as the spec says.
+- **Why:** on 20 Nov 2026 the Gemini Flash models returned 503/504 under load. Those errors are temporary just like 429, so waiting and retrying is the right response. Other errors (like a bad API key) fail straight away.
+
+## D12. Guard design: sqlglot parse, one SELECT, plus a read-only connection
+- **Chosen:** the guard parses the SQL with sqlglot and accepts exactly one statement that is a SELECT (a leading WITH is fine, and UNION of SELECTs is allowed). It rejects PRAGMA, ATTACH, DDL and DML anywhere in the tree. Then the query runs on a connection opened with `mode=ro` plus `PRAGMA query_only=ON`.
+- **Alternative:** a regex that blocks words like DROP, or trusting the prompt ("only write SELECT").
+- **Why:** an LLM must never be trusted to run DELETE. A regex is easy to fool, but a real parser sees the structure. The read-only connection is a second, independent lock: even if the guard had a bug, SQLite itself refuses to write. The row cap (1000) and 10 s timeout stop runaway queries.
