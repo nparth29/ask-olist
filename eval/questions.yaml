@@ -12,7 +12,7 @@
   difficulty: easy
   traps: []
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(*) AS orders_2017
     FROM orders
@@ -23,7 +23,7 @@
   difficulty: easy
   traps: []
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(DISTINCT seller_id) AS sellers_with_items
     FROM order_items
@@ -33,7 +33,7 @@
   difficulty: easy
   traps: []
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT MAX(price) AS max_item_price
     FROM order_items
@@ -43,7 +43,7 @@
   difficulty: easy
   traps: [4]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(*) AS canceled_orders
     FROM orders
@@ -54,7 +54,7 @@
   difficulty: easy
   traps: []
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT ROUND(AVG(freight_value), 2) AS avg_freight_per_item
     FROM order_items
