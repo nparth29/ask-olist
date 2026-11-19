@@ -121,7 +121,7 @@
   difficulty: medium
   traps: [3, 4]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT ROUND(SUM(op.payment_value), 2) AS credit_card_paid
     FROM order_payments op
@@ -135,7 +135,7 @@
   difficulty: medium
   traps: [1]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(*) AS multi_seller_orders
     FROM (
@@ -150,7 +150,7 @@
   difficulty: medium
   traps: [1]
   order_matters: true
-  verified: false
+  verified: true
   gold_sql: |
     SELECT payment_type, COUNT(DISTINCT order_id) AS orders
     FROM order_payments
@@ -163,7 +163,7 @@
   difficulty: medium
   traps: [2, 4]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT COUNT(*) AS customers_with_multiple_sellers
     FROM (
@@ -181,7 +181,7 @@
   difficulty: medium
   traps: [1, 4]
   order_matters: false
-  verified: false
+  verified: true
   gold_sql: |
     SELECT ROUND(1.0 * COUNT(*) / COUNT(DISTINCT oi.order_id), 2) AS avg_items_per_order
     FROM order_items oi

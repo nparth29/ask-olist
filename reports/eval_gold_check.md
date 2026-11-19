@@ -159,7 +159,7 @@ WHERE product_category_name IS NULL
 
 ## q11 (medium): How much was paid by credit card on delivered orders placed in 2018?
 
-verified: False   traps: [3, 4]   order matters: False
+verified: True   traps: [3, 4]   order matters: False
 
 ```sql
 SELECT ROUND(SUM(op.payment_value), 2) AS credit_card_paid
@@ -178,7 +178,7 @@ WHERE o.order_status = 'delivered'
 
 ## q12 (medium): How many orders contain items from more than one seller?
 
-verified: False   traps: [1]   order matters: False
+verified: True   traps: [1]   order matters: False
 
 ```sql
 SELECT COUNT(*) AS multi_seller_orders
@@ -198,7 +198,7 @@ FROM (
 
 ## q13 (medium): Which payment type is used in the largest number of orders?
 
-verified: False   traps: [1]   order matters: True
+verified: True   traps: [1]   order matters: True
 
 ```sql
 SELECT payment_type, COUNT(DISTINCT order_id) AS orders
@@ -216,7 +216,7 @@ LIMIT 1
 
 ## q14 (medium): In delivered orders, how many customers have bought from more than one seller?
 
-verified: False   traps: [2, 4]   order matters: False
+verified: True   traps: [2, 4]   order matters: False
 
 ```sql
 SELECT COUNT(*) AS customers_with_multiple_sellers
@@ -231,7 +231,7 @@ FROM (
 )
 ```
 
-1 row(s), 2.40s. First 1:
+1 row(s), 2.34s. First 1:
 
 | customers_with_multiple_sellers |
 |---|
@@ -239,7 +239,7 @@ FROM (
 
 ## q15 (medium): What is the average number of items per delivered order?
 
-verified: False   traps: [1, 4]   order matters: False
+verified: True   traps: [1, 4]   order matters: False
 
 ```sql
 SELECT ROUND(1.0 * COUNT(*) / COUNT(DISTINCT oi.order_id), 2) AS avg_items_per_order
@@ -248,7 +248,7 @@ JOIN orders o ON o.order_id = oi.order_id
 WHERE o.order_status = 'delivered'
 ```
 
-1 row(s), 0.76s. First 1:
+1 row(s), 0.77s. First 1:
 
 | avg_items_per_order |
 |---|
@@ -287,7 +287,7 @@ ORDER BY delivered_orders DESC
 LIMIT 5
 ```
 
-5 row(s), 1.66s. First 5:
+5 row(s), 1.62s. First 5:
 
 | seller_id | delivered_orders |
 |---|---|
@@ -312,7 +312,7 @@ ORDER BY product_revenue DESC
 LIMIT 5
 ```
 
-5 row(s), 1.28s. First 5:
+5 row(s), 1.24s. First 5:
 
 | seller_state | product_revenue |
 |---|---|
@@ -354,7 +354,7 @@ JOIN category_translation t ON t.product_category_name = p.product_category_name
 WHERE t.product_category_name_english = 'health_beauty'
 ```
 
-1 row(s), 0.23s. First 1:
+1 row(s), 0.22s. First 1:
 
 | avg_item_price |
 |---|
@@ -401,7 +401,7 @@ ORDER BY avg_order_value DESC
 LIMIT 5
 ```
 
-5 row(s), 1.85s. First 5:
+5 row(s), 1.80s. First 5:
 
 | customer_state | avg_order_value |
 |---|---|
@@ -431,7 +431,7 @@ WHERE o.order_status = 'delivered'
   AND strftime('%Y', o.order_purchase_timestamp) = '2018'
 ```
 
-1 row(s), 1.39s. First 1:
+1 row(s), 1.35s. First 1:
 
 | avg_product_revenue_per_order | avg_paid_per_order |
 |---|---|
@@ -454,7 +454,7 @@ WHERE o.order_status = 'delivered'
   AND o.order_delivered_customer_date > o.order_estimated_delivery_date
 ```
 
-1 row(s), 1.30s. First 1:
+1 row(s), 1.27s. First 1:
 
 | avg_review_score_late_orders |
 |---|
@@ -508,7 +508,7 @@ ORDER BY pct_late DESC
 LIMIT 3
 ```
 
-3 row(s), 2.15s. First 3:
+3 row(s), 2.09s. First 3:
 
 | seller_id | pct_late | delivered_orders |
 |---|---|---|
@@ -534,7 +534,7 @@ GROUP BY op.payment_type
 ORDER BY op.payment_type
 ```
 
-5 row(s), 1.35s. First 5:
+5 row(s), 1.32s. First 5:
 
 | payment_type | avg_review_score |
 |---|---|
@@ -569,7 +569,7 @@ ORDER BY pct_cross_state DESC
 LIMIT 5
 ```
 
-5 row(s), 3.80s. First 5:
+5 row(s), 3.93s. First 5:
 
 | category | pct_cross_state | items |
 |---|---|---|
@@ -597,7 +597,7 @@ FROM spend
 WHERE total > (SELECT AVG(total) FROM spend)
 ```
 
-1 row(s), 2.42s. First 1:
+1 row(s), 2.36s. First 1:
 
 | above_average_customers |
 |---|
@@ -623,7 +623,7 @@ WHERE g.zip IS NULL
 
 ## Checks
 
-- questions: 30, verified: 10, gold SQL that failed to run: 0
+- questions: 30, verified: 15, gold SQL that failed to run: 0
 - difficulty split: {'easy': 10, 'medium': 12, 'hard': 8} (expected {'easy': 10, 'medium': 12, 'hard': 8}) -> OK
 - questions that test at least one data trap: 24 (need 8 or more) -> OK
 - trap numbers covered: [1, 2, 3, 4, 5, 6, 7, 8]
