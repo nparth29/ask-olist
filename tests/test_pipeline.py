@@ -113,6 +113,34 @@ def test_daily_quota_429_fails_fast(monkeypatch):
     assert len(calls) == 1 and sleeps == []   # no waiting, no retrying
 
 
+def test_client_timeout_is_retried_with_backoff(monkeypatch):
+    sleeps, attempts = [], []
+    monkeypatch.setattr(llm.time, "sleep", sleeps.append)
+    timeout_error = llm.TIMEOUT_ERRORS[1]      # the SDK's own timeout class (httpx2.TimeoutException)
+
+    def slow_then_ok():
+        attempts.append(1)
+        if len(attempts) < 3:
+            raise timeout_error("The read operation timed out")
+        return "ok"
+
+    assert llm._call_with_backoff(slow_then_ok) == "ok"
+    assert sleeps == [2.0, 4.0]
+
+
+def test_client_timeout_gives_up_after_max_retries(monkeypatch):
+    calls = []
+    monkeypatch.setattr(llm.time, "sleep", lambda s: None)
+
+    def always_timeout():
+        calls.append(1)
+        raise TimeoutError("timed out")
+
+    with pytest.raises(TimeoutError):
+        llm._call_with_backoff(always_timeout)
+    assert len(calls) == config.LLM_MAX_RETRIES + 1
+
+
 def test_short_429_is_retried_with_backoff(monkeypatch):
     sleeps = []
     monkeypatch.setattr(llm.time, "sleep", sleeps.append)

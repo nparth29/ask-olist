@@ -149,3 +149,15 @@ Known remaining wrinkle: the gold uses "the 2nd order by time is later than the 
 All 30 evaluation questions are now `verified: true`.
 
 **Update to D25 (20 Nov 2026), q25 final wording and gold (supersedes the two q25 notes above):** q25 now reads "How many customers placed another order at a later time, within 30 days of their first order?" and the gold is **1,261** (not 1,530 or 1,254). The gold SQL takes each person's first order time (`MIN` of the purchase timestamps per `customer_unique_id`) and counts people who have any order strictly later than that, within 30 days of it. This removes both ambiguities we found: an order at the same timestamp as the first does not count (it is not "later"), and it no longer matters which of several orders is called the "second" (the 7 people between 1,254 and 1,261 have a same-timestamp order followed by a later one within 30 days). The wording "another order at a later time" now matches the SQL directly. q25 stays `verified: true`.
+
+## D26. Retry client-side timeouts too; longer timeout (found in Checkpoint 4)
+- **What happened (20 Nov 2026):** the first attempt at the 5-question RAG check crashed on the very first question. The model call took longer than our 90 second client timeout and raised `ReadTimeout`. Our backoff only retried API errors (429, 503, 504), so the timeout was not retried and the run died. No quota error was involved.
+- **Chosen:** a client-side timeout is now retried with the same exponential backoff as a 504, and the client timeout is 180 seconds. It is covered by two tests (retried, and gives up after the maximum number of retries).
+- **Alternative:** only raise the timeout, or catch the error in the caller.
+- **Why:** a timeout is the same kind of temporary failure as a 504, so it belongs in the one place that handles retries. A longer timeout alone would only move the problem. Each retry may use quota, so the checkpoint script counted real attempts, limited retries to 2 and stopped at the first error.
+
+## D27. Checkpoint 4 result: 5 sample questions with RAG on
+- **Result (20 Nov 2026):** all 5 questions succeeded on the first SQL attempt, and all 5 gave the same result rows as the earlier zero-shot run (which Parth checked by eye). Retrieved examples: Q1 ex05, ex16, ex07; Q2 ex02, ex01, ex12; Q3 ex09, ex13, ex28; Q4 ex13, ex12, ex03; Q5 ex12, ex03, ex28. The run made 11 real generate calls (one question needed an extra transport-level retry).
+- **Checkpoint 3 evidence:** because every first attempt worked, there is still no real log entry where attempt 1 failed and attempt 2 succeeded. The mocked test (`tests/test_pipeline.py`) remains the evidence for the retry loop; a real entry will be shown when the evaluation produces one.
+- **Not a measurement:** 5 questions is a sanity check, not accuracy. Accuracy comes only from the Phase 5 evaluation.
+- **README example:** the README example is one of these real runs, saved by `scripts/save_sample_run.py` into `reports/sample_run.md` (a replay from the cache, with the API key blanked so it makes no API calls). No latency is quoted because the pipeline does not yet record it per question.

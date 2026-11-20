@@ -49,5 +49,5 @@ ROWS_FOR_ANSWER = 50     # rows shown to the LLM when it writes the answer
 LLM_THINKING_LEVEL: str | None = None
 
 # LLM call settings.
-LLM_TIMEOUT_MS = 90_000
+LLM_TIMEOUT_MS = 180_000   # gemini-3.5-flash can take well over 90 s on a long prompt (a 90 s limit timed out on 20 Nov 2026)
 LLM_MAX_RETRIES = 5

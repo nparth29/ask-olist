@@ -1,4 +1,5 @@
 """Gemini calls: disk-cached, with exponential backoff on rate-limit / overload errors."""
+import importlib
 import json
 import re
 import time
@@ -38,19 +39,37 @@ def retry_delay_seconds(exc: Exception) -> float | None:
     return float(match.group(1)) if match else None
 
 
+def _timeout_error_types() -> tuple[type[BaseException], ...]:
+    """Client-side timeout classes. The SDK's HTTP library is `httpx2` here, `httpx` in other versions."""
+    found: list[type[BaseException]] = [TimeoutError]
+    for module_name in ("httpx2", "httpx"):
+        try:
+            found.append(importlib.import_module(module_name).TimeoutException)
+        except (ImportError, AttributeError):
+            pass
+    return tuple(found)
+
+
+TIMEOUT_ERRORS = _timeout_error_types()
+
+
 def _call_with_backoff(make_call):
     delay = 2.0
     for attempt in range(config.LLM_MAX_RETRIES + 1):
         try:
             return make_call()
+        except TIMEOUT_ERRORS:
+            # The request took longer than our client timeout: same kind of temporary failure as a 504.
+            if attempt == config.LLM_MAX_RETRIES:
+                raise
         except errors.APIError as exc:
             if exc.code not in RETRYABLE_CODES or attempt == config.LLM_MAX_RETRIES:
                 raise
             asked = retry_delay_seconds(exc)
             if asked is not None and asked > MAX_USEFUL_WAIT_S:
                 raise
-            time.sleep(delay)
-            delay *= 2  # 2s, 4s, 8s, ...
+        time.sleep(delay)
+        delay *= 2  # 2s, 4s, 8s, ...
 
 
 class SqlOutput:  # shape of the JSON we ask Gemini for (a plain dict-schema keeps imports small)

@@ -14,32 +14,40 @@ It handles counts, sums, averages, top-N, monthly trends, and comparisons by sta
 
 ## One example
 
-**Question:** "Which 5 customer states have the most late deliveries?"
+**Question:** "Which 5 product categories had the most late deliveries in 2018?"
 
-The app shows the SQL, the result and a short answer. This is the verified example SQL for that question and its result, from `reports/examples_check.md`:
+This is one real run of the app with RAG on. The first SQL attempt worked, so no retry was needed. The full record is in [`reports/sample_run.md`](reports/sample_run.md).
+
+**Answer:** "For orders purchased in 2018 that were delivered after their estimated delivery date, **health_beauty** recorded the most late deliveries with 570. The next highest categories were **bed_bath_table** with 477, **sports_leisure** with 383, **computers_accessories** with 365, and **watches_gifts** with 331."
+
+**SQL the model wrote** (only line breaks added here for reading):
 
 ```sql
-SELECT c.customer_state, COUNT(*) AS late_orders
+SELECT COALESCE(t.product_category_name_english, p.product_category_name) AS category, COUNT(DISTINCT o.order_id) AS late_deliveries
 FROM orders o
-JOIN customers c ON c.customer_id = o.customer_id
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+LEFT JOIN category_translation t ON t.product_category_name = p.product_category_name
 WHERE o.order_status = 'delivered'
+  AND strftime('%Y', o.order_purchase_timestamp) = '2018'
   AND o.order_delivered_customer_date IS NOT NULL
   AND o.order_estimated_delivery_date IS NOT NULL
   AND o.order_delivered_customer_date > o.order_estimated_delivery_date
-GROUP BY c.customer_state
-ORDER BY late_orders DESC
+  AND p.product_category_name IS NOT NULL
+GROUP BY category
+ORDER BY late_deliveries DESC
 LIMIT 5
 ```
 
-| customer_state | late_orders |
+| category | late_deliveries |
 |---|---|
-| SP | 2387 |
-| RJ | 1664 |
-| MG | 637 |
-| BA | 457 |
-| RS | 382 |
+| health_beauty | 570 |
+| bed_bath_table | 477 |
+| sports_leisure | 383 |
+| computers_accessories | 365 |
+| watches_gifts | 331 |
 
-An answer written from these rows would read like: "SP had the most late deliveries (2,387), followed by RJ (1,664), MG (637), BA (457) and RS (382). Only delivered orders were counted."
+The model also listed its assumptions: delivered orders only, both dates present, distinct late orders counted per category (so a multi-item order is counted once), and English category names. The 3 verified examples retrieved for this question were ex05 (similarity 0.9158), ex16 (0.8846) and ex07 (0.8840). This is a single run, not an accuracy measurement.
 
 ## How it works
 
@@ -132,7 +140,7 @@ It opens in your browser. Type a question (or click a sample), and it shows the 
 python -m pytest
 ```
 
-Other scripts: `python -m ask_olist.smoke` checks the key and lists the available Flash models; `python scripts\check_traps.py` regenerates the trap evidence; `python scripts\check_examples.py` runs every example query locally; `python scripts\check_gold.py` runs the gold SQL of the evaluation questions locally.
+Other scripts: `python -m ask_olist.smoke` checks the key and lists the available Flash models; `python scripts\check_traps.py` regenerates the trap evidence; `python scripts\check_examples.py` runs every example query locally; `python scripts\check_gold.py` runs the gold SQL of the evaluation questions locally; `python scripts\save_sample_run.py` replays the README example from the disk cache (no API calls).
 
 ## Project layout
 
@@ -158,6 +166,7 @@ These are real problems from building it. Each one is logged in `DECISIONS.md` w
 2. **A lower "thinking" level looked faster but changed an answer, so I rejected it.** I tested `thinking_level=low` on 4 sample questions (the 5th could not run when the free-tier daily limit ran out). 3 of the 4 gave the same values, but the repeat-customer question changed from 2,997 customers to 2,801, because `low` added a `delivered` filter the question never asked for. That misapplies the rule that the delivered default is for sales questions, and my rule was to keep `low` only if every answer matched. I did not measure a speed gain: the first-run timings were mixed up with overload retries, so I make no latency claim. Evidence: [`reports/thinking_level_test.md`](reports/thinking_level_test.md). I kept the model's default thinking. (D13)
 3. **A simple query hit the 10-second limit.** "Top 10 sellers by product revenue" timed out. The database had no table statistics, so SQLite picked a slow join plan and built a temporary index for every item row instead of using the existing `order_id` index. Running `ANALYZE` once when the database is built fixed it, and it happens at build time because the app never writes. (D17)
 4. **Retrying a daily quota error is pointless.** The first retry loop backed off for about a minute on the free tier's daily-limit error, which can never succeed. It now fails immediately when Google says to wait for hours. (D14, D16)
+5. **A slow model call crashed a run, because timeouts were not retried.** On the first attempt at the 5-question RAG check, the model took longer than my 90-second client timeout, the request failed with a read timeout, and the program crashed. The retry code handled 429, 503 and 504 but not client-side timeouts, which are the same kind of temporary failure. Timeouts are now retried with backoff, covered by tests, and the client timeout is 180 seconds. (D26)
 
 ## Limitations
 
